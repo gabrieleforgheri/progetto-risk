@@ -1,2 +1,2 @@
 # trump-re-di-cuba
-Gaza bombe a grappolo
+天空中的紅日
