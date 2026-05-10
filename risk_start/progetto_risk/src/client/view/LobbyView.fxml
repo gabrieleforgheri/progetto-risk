@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml">
+    <top>
+        <VBox spacing="6">
+            <children>
+                <Label text="Risk Lobby" style="-fx-font-size: 30px; -fx-font-weight: bold;" />
+                <Label text="Connect to the server, wait for 3 to 6 players, then the first player can start." style="-fx-text-fill: #555555;" />
+            </children>
+            <padding>
+                <Insets top="0" right="0" bottom="24" left="0" />
+            </padding>
+        </VBox>
+    </top>
+
+    <center>
+        <VBox spacing="16">
+            <children>
+                <GridPane hgap="10" vgap="12">
+                    <children>
+                        <Label text="Host" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                        <TextField fx:id="hostField" GridPane.columnIndex="1" GridPane.rowIndex="0" text="localhost" />
+                        <Label text="Port" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                        <TextField fx:id="portField" GridPane.columnIndex="1" GridPane.rowIndex="1" text="5555" />
+                        <Label text="Nickname" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                        <TextField fx:id="nickNameField" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                    </children>
+                </GridPane>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <children>
+                        <Button fx:id="connectButton" text="Connect" />
+                        <Button fx:id="startButton" text="Start" />
+                    </children>
+                </HBox>
+
+                <!-- Sostituito EventLogView con TextArea standard per compatibilità con Scene Builder -->
+                <TextArea fx:id="eventLogView" editable="false" VBox.vgrow="ALWAYS" />
+            </children>
+            <padding>
+                <Insets top="18" right="18" bottom="18" left="18" />
+            </padding>
+        </VBox>
+    </center>
+
+    <right>
+        <VBox spacing="10">
+            <children>
+                <Label text="Players" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+                <Label fx:id="firstPlayerLabel" text="First player: -" />
+                <ListView fx:id="playersList" prefWidth="280" minWidth="240" VBox.vgrow="ALWAYS" />
+            </children>
+            <padding>
+                <Insets top="18" right="18" bottom="18" left="18" />
+            </padding>
+        </VBox>
+    </right>
+
+    <bottom>
+        <Label fx:id="statusLabel" />
+    </bottom>
+
+    <padding>
+        <Insets top="24" right="24" bottom="24" left="24" />
+    </padding>
+</BorderPane>

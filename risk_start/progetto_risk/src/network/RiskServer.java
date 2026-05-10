@@ -1,0 +1,343 @@
+package network;
+
+import menu.Setup;
+
+import java.io.Closeable;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+// Central authoritative server for the Risk match.
+public class RiskServer implements Closeable {
+    // Default port used by Start.java and by direct RiskServer execution.
+    public static final int DEFAULT_PORT = 5555;
+
+    private final int port;
+    // CopyOnWriteArrayList lets broadcast iterate safely while clients join or leave.
+    private final List<ClientHandler> clients;
+    // Protects lobby-only state: first player, player limit checks, and game start.
+    private final Object lobbyLock;
+    private ServerSocket serverSocket;
+    // The first joined player is the only player allowed to send the Start command.
+    private String firstPlayerNickName;
+    // Once true, new players are rejected and setup cannot run again.
+    private boolean gameStarted;
+    private volatile boolean running;
+
+    public RiskServer() {
+        this(DEFAULT_PORT);
+    }
+
+    public RiskServer(int port) {
+        this.port = port;
+        this.clients = new CopyOnWriteArrayList<>();
+        this.lobbyLock = new Object();
+    }
+
+    public static void main(String[] args) throws IOException {
+        int port = args.length > 0 ? Integer.parseInt(args[0]) : DEFAULT_PORT;
+        RiskServer server = new RiskServer(port);
+        server.start();
+    }
+
+    // Opens the server socket and creates one ClientHandler thread per accepted client.
+    public void start() throws IOException {
+        serverSocket = new ServerSocket(port);
+        running = true;
+        System.out.println("Risk server started on port " + port);
+
+        while (running) {
+            Socket socket = serverSocket.accept();
+            // Reject before creating a handler when the lobby is full or already started.
+            if (!canAcceptNewClient()) {
+                rejectClient(socket, "The game already has 6 players or has already started.");
+                continue;
+            }
+
+            ClientHandler client = new ClientHandler(socket);
+            clients.add(client);
+            new Thread(client, "risk-client-" + socket.getRemoteSocketAddress()).start();
+        }
+    }
+
+    // Sends one message to every connected client, including the original sender.
+    public void broadcast(GameMessage message) {
+        for (ClientHandler client : clients) {
+            client.send(message);
+        }
+    }
+
+    // Removes disconnected clients and informs the lobby unless LEAVE was already broadcast.
+    private void remove(ClientHandler client) {
+        clients.remove(client);
+        if (client.nickName != null && !client.leaveAnnounced) {
+            broadcast(GameMessage.leave(client.nickName));
+        }
+        assignNewFirstPlayerIfNeeded();
+    }
+
+    @Override
+    public void close() throws IOException {
+        // Closing the server stops the accept loop and closes all active client sockets.
+        running = false;
+        for (ClientHandler client : clients) {
+            client.close();
+        }
+        if (serverSocket != null) {
+            serverSocket.close();
+        }
+    }
+
+    private boolean canAcceptNewClient() {
+        synchronized (lobbyLock) {
+            // clients.size() includes connected sockets that may not have sent JOIN yet.
+            return !gameStarted && clients.size() < Setup.MAX_PLAYERS;
+        }
+    }
+
+    // Sends a final ERROR message to a socket that cannot enter the lobby.
+    private void rejectClient(Socket socket, String reason) {
+        try (Socket rejectedSocket = socket;
+             ObjectOutputStream output = new ObjectOutputStream(rejectedSocket.getOutputStream())) {
+            output.writeObject(GameMessage.error(reason));
+            output.flush();
+        } catch (IOException ignored) {
+        }
+    }
+
+    // Routes every incoming client message through the server's lobby/game rules.
+    private void handleClientMessage(ClientHandler client, GameMessage message) {
+        if (message.getType() == MessageType.JOIN) {
+            handleJoin(client, message);
+            return;
+        }
+
+        if (message.getType() == MessageType.LEAVE) {
+            client.leaveAnnounced = true;
+            broadcast(message);
+            client.closeQuietly();
+            return;
+        }
+
+        if (message.getType() == MessageType.CHAT && isStartCommand(message)) {
+            startGame(client);
+            return;
+        }
+
+        broadcast(message);
+    }
+
+    // Accepts a player into the lobby if the match has room and the nickname is unique.
+    private void handleJoin(ClientHandler client, GameMessage message) {
+        synchronized (lobbyLock) {
+            if (gameStarted) {
+                client.send(GameMessage.error("The game has already started."));
+                client.closeQuietly();
+                return;
+            }
+
+            if (getJoinedPlayers().size() >= Setup.MAX_PLAYERS) {
+                client.send(GameMessage.error("The game is full. Maximum players: " + Setup.MAX_PLAYERS + "."));
+                client.closeQuietly();
+                return;
+            }
+
+            if (isNickNameAlreadyUsed(message.getSender())) {
+                client.send(GameMessage.error("This nickname is already in use."));
+                client.closeQuietly();
+                return;
+            }
+
+            client.nickName = message.getSender();
+            if (firstPlayerNickName == null) {
+                // The first accepted nickname becomes the lobby owner/start authority.
+                firstPlayerNickName = client.nickName;
+                client.send(GameMessage.chat("server", "You are the first player. Write Start to begin when everyone is ready."));
+            }
+        }
+
+        broadcast(message);
+        broadcastLobbyState();
+    }
+
+    // The command is intentionally case-insensitive, so "Start", "start", and " START " work.
+    private boolean isStartCommand(GameMessage message) {
+        String text = message.get("text");
+        return text != null && "start".equalsIgnoreCase(text.trim());
+    }
+
+    // Validates the Start command and broadcasts the setup snapshot when the game begins.
+    private void startGame(ClientHandler client) {
+        synchronized (lobbyLock) {
+            if (client.nickName == null) {
+                client.send(GameMessage.error("Join the game before starting it."));
+                return;
+            }
+
+            if (!client.nickName.equals(firstPlayerNickName)) {
+                client.send(GameMessage.error("Only the first player can start the game."));
+                return;
+            }
+
+            if (gameStarted) {
+                client.send(GameMessage.error("The game has already started."));
+                return;
+            }
+
+            List<String> players = getJoinedPlayers();
+            if (players.size() < Setup.MIN_PLAYERS) {
+                client.send(GameMessage.error("At least " + Setup.MIN_PLAYERS + " players are needed to start."));
+                return;
+            }
+
+            Setup.GameSetup gameSetup = Setup.createGame(players);
+            Map<String, String> data = gameSetup.toMessageData();
+            // phase distinguishes this payload from lobby GAME_STATE messages.
+            data.put("phase", "started");
+            // The first turn follows the lobby join order.
+            data.put("currentPlayer", players.get(0));
+            gameStarted = true;
+
+            // Broadcast both a human-readable notice and structured setup/turn data.
+            broadcast(GameMessage.chat("server", "Game started by " + client.nickName + "."));
+            broadcast(GameMessage.gameState(data));
+            broadcast(GameMessage.turnChange(players.get(0)));
+        }
+    }
+
+    // Sends a small lobby snapshot after joins/leaves so clients can render waiting state.
+    private void broadcastLobbyState() {
+        Map<String, String> data = new java.util.LinkedHashMap<>();
+        List<String> players = getJoinedPlayers();
+        data.put("phase", "lobby");
+        data.put("players", String.join(",", players));
+        data.put("firstPlayer", firstPlayerNickName == null ? "" : firstPlayerNickName);
+        data.put("minPlayers", String.valueOf(Setup.MIN_PLAYERS));
+        data.put("maxPlayers", String.valueOf(Setup.MAX_PLAYERS));
+        broadcast(GameMessage.gameState(data));
+    }
+
+    // Returns accepted nicknames in the same order as their ClientHandler entries.
+    private List<String> getJoinedPlayers() {
+        List<String> players = new ArrayList<>();
+        for (ClientHandler client : clients) {
+            if (client.nickName != null) {
+                players.add(client.nickName);
+            }
+        }
+        return players;
+    }
+
+    // Nicknames are unique because they identify player-owned territories in messages.
+    private boolean isNickNameAlreadyUsed(String nickName) {
+        for (ClientHandler client : clients) {
+            if (nickName.equals(client.nickName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // If the first player leaves before game start, the next joined player becomes starter.
+    private void assignNewFirstPlayerIfNeeded() {
+        synchronized (lobbyLock) {
+            if (gameStarted || firstPlayerNickName == null || getJoinedPlayers().contains(firstPlayerNickName)) {
+                return;
+            }
+
+            firstPlayerNickName = null;
+            for (ClientHandler client : clients) {
+                if (client.nickName != null) {
+                    firstPlayerNickName = client.nickName;
+                    client.send(GameMessage.chat("server", "You are now the first player. Write Start to begin when everyone is ready."));
+                    break;
+                }
+            }
+        }
+        broadcastLobbyState();
+    }
+
+    // Handles one client's socket streams and forwards valid messages to the server.
+    private final class ClientHandler implements Runnable, Closeable {
+        private final Socket socket;
+        private ObjectOutputStream output;
+        private ObjectInputStream input;
+        // Null until the JOIN message is accepted.
+        private String nickName;
+        // Prevents broadcasting duplicate LEAVE messages during normal disconnect.
+        private boolean leaveAnnounced;
+
+        private ClientHandler(Socket socket) {
+            this.socket = socket;
+        }
+
+        @Override
+        public void run() {
+            try {
+                // Output is created and flushed first to avoid ObjectStream header deadlocks.
+                output = new ObjectOutputStream(socket.getOutputStream());
+                output.flush();
+                input = new ObjectInputStream(socket.getInputStream());
+                readMessages();
+            } catch (EOFException ignored) {
+                // Normal socket closure; cleanup happens in finally.
+            } catch (IOException exception) {
+                send(GameMessage.error("Connection error: " + exception.getMessage()));
+            } catch (ClassNotFoundException exception) {
+                send(GameMessage.error("Unknown message received."));
+            } finally {
+                remove(this);
+                closeQuietly();
+            }
+        }
+
+        // Blocking read loop for this one client.
+        private void readMessages() throws IOException, ClassNotFoundException {
+            while (running && !socket.isClosed()) {
+                Object object = input.readObject();
+                if (object instanceof GameMessage) {
+                    handleClientMessage(this, (GameMessage) object);
+                } else {
+                    send(GameMessage.error("Only GameMessage objects are accepted."));
+                }
+            }
+        }
+
+        private void send(GameMessage message) {
+            if (output == null) {
+                return;
+            }
+
+            try {
+                // Synchronization allows broadcasts and direct errors to share the same stream safely.
+                synchronized (output) {
+                    output.writeObject(message);
+                    output.flush();
+                    // Sends fresh object values even if the same object reference is reused later.
+                    output.reset();
+                }
+            } catch (IOException exception) {
+                closeQuietly();
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+            socket.close();
+        }
+
+        private void closeQuietly() {
+            try {
+                close();
+            } catch (IOException ignored) {
+            }
+        }
+    }
+}

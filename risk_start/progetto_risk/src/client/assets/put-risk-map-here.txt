@@ -1,0 +1,7 @@
+Put the Risk SVG map in this folder with this name:
+
+risk-map.svg
+
+The JavaFX client loads it from:
+
+src/client/assets/risk-map.svg
