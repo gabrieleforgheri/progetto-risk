@@ -12,8 +12,12 @@ public enum MessageType {
     ATTACK,
     // The dice/fight result of an attack, including losses and conquest state.
     ATTACK_RESULT,
+    // The active player places reinforcement armies on an owned territory.
+    REINFORCEMENT,
     // Armies are moved between two owned territories.
     ARMY_MOVEMENT,
+    // The active player advances from attack to movement or ends the turn.
+    END_PHASE,
     // The server announces whose turn is active.
     TURN_CHANGE,
     // The server sends lobby state or full game setup data.

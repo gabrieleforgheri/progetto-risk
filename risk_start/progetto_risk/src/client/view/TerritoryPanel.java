@@ -16,8 +16,10 @@ public class TerritoryPanel extends VBox {
     private final TextField fromField;
     private final TextField toField;
     private final Spinner<Integer> armiesSpinner;
+    private final Button reinforceButton;
     private final Button attackButton;
     private final Button moveButton;
+    private final Button endPhaseButton;
 
     public TerritoryPanel(GameController controller) {
         this.controller = controller;
@@ -25,8 +27,10 @@ public class TerritoryPanel extends VBox {
         this.fromField = new TextField();
         this.toField = new TextField();
         this.armiesSpinner = new Spinner<>(1, 99, 1);
+        this.reinforceButton = new Button("Reinforce");
         this.attackButton = new Button("Attack");
         this.moveButton = new Button("Move");
+        this.endPhaseButton = new Button("End Phase");
         buildLayout();
         bindActions();
     }
@@ -54,11 +58,16 @@ public class TerritoryPanel extends VBox {
         form.add(new Label("Armies"), 0, 2);
         form.add(armiesSpinner, 1, 2);
 
-        HBox buttons = new HBox(8, attackButton, moveButton);
+        HBox buttons = new HBox(8, reinforceButton, attackButton, moveButton, endPhaseButton);
         getChildren().addAll(titleLabel, form, buttons);
     }
 
     private void bindActions() {
+        reinforceButton.setOnAction(event -> controller.sendReinforcement(
+                toField.getText().trim(),
+                armiesSpinner.getValue()
+        ));
+
         attackButton.setOnAction(event -> controller.sendAttack(
                 fromField.getText().trim(),
                 toField.getText().trim(),
@@ -70,5 +79,7 @@ public class TerritoryPanel extends VBox {
                 toField.getText().trim(),
                 armiesSpinner.getValue()
         ));
+
+        endPhaseButton.setOnAction(event -> controller.endPhase());
     }
 }
