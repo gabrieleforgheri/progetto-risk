@@ -11,6 +11,8 @@ public class ClientGameState {
     private String status = "Disconnected.";
     private String firstPlayer = "";
     private String currentPlayer = "";
+    private String stage = "";
+    private String winner = "";
     private final List<String> lobbyPlayers = new ArrayList<>();
     private final List<String> events = new ArrayList<>();
     private final Map<String, PlayerState> players = new LinkedHashMap<>();
@@ -37,6 +39,14 @@ public class ClientGameState {
 
     public String getCurrentPlayer() {
         return currentPlayer;
+    }
+
+    public String getStage() {
+        return stage;
+    }
+
+    public String getWinner() {
+        return winner;
     }
 
     public void setCurrentPlayer(String currentPlayer) {
@@ -75,6 +85,8 @@ public class ClientGameState {
     public void updateStartedGame(Map<String, String> data) {
         players.clear();
         currentPlayer = valueOrEmpty(data.get("currentPlayer"));
+        stage = valueOrEmpty(data.get("stage"));
+        winner = valueOrEmpty(data.get("winner"));
 
         for (String nickName : splitList(data.get("players"))) {
             String prefix = "player." + nickName + ".";

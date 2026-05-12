@@ -87,6 +87,19 @@ public class GameController implements MessageListener {
         }
     }
 
+    public void sendReinforcement(String territory, int armies) {
+        if (connection == null) {
+            setStatus("Connect before reinforcing.");
+            return;
+        }
+
+        try {
+            connection.sendReinforcement(territory, armies);
+        } catch (IOException exception) {
+            setStatus("Reinforcement message failed: " + exception.getMessage());
+        }
+    }
+
     public void sendArmyMovement(String fromTerritory, String toTerritory, int armies) {
         if (connection == null) {
             setStatus("Connect before moving armies.");
@@ -97,6 +110,19 @@ public class GameController implements MessageListener {
             connection.sendArmyMovement(fromTerritory, toTerritory, armies);
         } catch (IOException exception) {
             setStatus("Movement message failed: " + exception.getMessage());
+        }
+    }
+
+    public void endPhase() {
+        if (connection == null) {
+            setStatus("Connect before changing phase.");
+            return;
+        }
+
+        try {
+            connection.sendEndPhase();
+        } catch (IOException exception) {
+            setStatus("Phase change failed: " + exception.getMessage());
         }
     }
 
@@ -136,6 +162,8 @@ public class GameController implements MessageListener {
             refreshGameView();
         } else if (message.getType() == MessageType.CHAT) {
             addEvent(message.getSender() + ": " + message.get("text"));
+        } else if (message.getType() == MessageType.ATTACK_RESULT) {
+            addEvent("Attack result: " + message.getData());
         } else if (message.getType() == MessageType.ERROR) {
             setStatus("Server error: " + message.get("text"));
         } else {
@@ -159,6 +187,12 @@ public class GameController implements MessageListener {
             if (onGameStarted != null) {
                 onGameStarted.run();
             }
+            return;
+        }
+
+        if ("playing".equals(phase) || "gameOver".equals(phase)) {
+            state.updateStartedGame(data);
+            refreshGameView();
         }
     }
 

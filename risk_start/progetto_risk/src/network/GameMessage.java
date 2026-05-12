@@ -53,6 +53,14 @@ public class GameMessage implements Serializable {
         return new GameMessage(MessageType.ATTACK, nickName, data);
     }
 
+    // Reinforcement placement during the first setup pass or the reinforcement phase.
+    public static GameMessage reinforcement(String nickName, String territory, int armies) {
+        Map<String, String> data = new HashMap<>();
+        data.put("territory", territory);
+        data.put("armies", String.valueOf(armies));
+        return new GameMessage(MessageType.REINFORCEMENT, nickName, data);
+    }
+
     // Final result of an attack. conquered=true means the defender lost the target territory.
     public static GameMessage attackResult(String nickName, String fromTerritory, String toTerritory,
                                            int attackerLosses, int defenderLosses, boolean conquered) {
@@ -72,6 +80,11 @@ public class GameMessage implements Serializable {
         data.put("toTerritory", toTerritory);
         data.put("armies", String.valueOf(armies));
         return new GameMessage(MessageType.ARMY_MOVEMENT, nickName, data);
+    }
+
+    // Phase advancement: ATTACK -> MOVEMENT, MOVEMENT -> next player's REINFORCEMENT.
+    public static GameMessage endPhase(String nickName) {
+        return new GameMessage(MessageType.END_PHASE, nickName, Collections.emptyMap());
     }
 
     // Server-only message that tells all clients whose turn should be active.

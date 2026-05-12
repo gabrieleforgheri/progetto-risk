@@ -22,7 +22,12 @@ public class PlayerPanel extends VBox {
 
     public void refresh() {
         ClientGameState state = controller.getState();
-        turnLabel.setText("Current turn: " + emptyLabel(state.getCurrentPlayer()));
+        String phase = emptyLabel(state.getStage());
+        String winner = state.getWinner() == null || state.getWinner().trim().isEmpty()
+                ? ""
+                : " | winner: " + state.getWinner();
+        turnLabel.setText("Current turn: " + emptyLabel(state.getCurrentPlayer())
+                + " | phase: " + phase + winner);
         playersList.getItems().clear();
 
         for (ClientGameState.PlayerState player : state.getPlayers().values()) {

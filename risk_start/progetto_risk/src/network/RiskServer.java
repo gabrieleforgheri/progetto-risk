@@ -1,5 +1,6 @@
 package network;
 
+import gameLogic.GameLogic;
 import menu.Setup;
 
 import java.io.Closeable;
@@ -24,11 +25,13 @@ public class RiskServer implements Closeable {
     private final List<ClientHandler> clients;
     // Protects lobby-only state: first player, player limit checks, and game start.
     private final Object lobbyLock;
+    private final Object gameLock;
     private ServerSocket serverSocket;
     // The first joined player is the only player allowed to send the Start command.
     private String firstPlayerNickName;
     // Once true, new players are rejected and setup cannot run again.
     private boolean gameStarted;
+    private GameLogic gameLogic;
     private volatile boolean running;
 
     public RiskServer() {
@@ -39,6 +42,7 @@ public class RiskServer implements Closeable {
         this.port = port;
         this.clients = new CopyOnWriteArrayList<>();
         this.lobbyLock = new Object();
+        this.gameLock = new Object();
     }
 
     public static void main(String[] args) throws IOException {
@@ -131,6 +135,14 @@ public class RiskServer implements Closeable {
             return;
         }
 
+        if (message.getType() == MessageType.REINFORCEMENT
+                || message.getType() == MessageType.ATTACK
+                || message.getType() == MessageType.ARMY_MOVEMENT
+                || message.getType() == MessageType.END_PHASE) {
+            handleGameAction(client, message);
+            return;
+        }
+
         broadcast(message);
     }
 
@@ -198,18 +210,96 @@ public class RiskServer implements Closeable {
             }
 
             Setup.GameSetup gameSetup = Setup.createGame(players);
-            Map<String, String> data = gameSetup.toMessageData();
-            // phase distinguishes this payload from lobby GAME_STATE messages.
-            data.put("phase", "started");
-            // The first turn follows the lobby join order.
-            data.put("currentPlayer", players.get(0));
+            synchronized (gameLock) {
+                gameLogic = GameLogic.fromSetup(gameSetup);
+            }
             gameStarted = true;
 
             // Broadcast both a human-readable notice and structured setup/turn data.
             broadcast(GameMessage.chat("server", "Game started by " + client.nickName + "."));
-            broadcast(GameMessage.gameState(data));
-            broadcast(GameMessage.turnChange(players.get(0)));
+            broadcast(GameMessage.gameState(gameLogic.toMessageData("started")));
+            broadcast(GameMessage.turnChange(gameLogic.getCurrentPlayer()));
         }
+    }
+
+    private void handleGameAction(ClientHandler client, GameMessage message) {
+        if (client.nickName == null) {
+            client.send(GameMessage.error("Join the game before sending game actions."));
+            return;
+        }
+
+        synchronized (gameLock) {
+            if (!gameStarted || gameLogic == null) {
+                client.send(GameMessage.error("The game has not started yet."));
+                return;
+            }
+
+            GameLogic.Result result;
+            try {
+                result = applyGameAction(client.nickName, message);
+            } catch (NumberFormatException exception) {
+                client.send(GameMessage.error("Armies must be a valid number."));
+                return;
+            }
+
+            if (!result.isAccepted()) {
+                client.send(GameMessage.error(result.getMessage()));
+                return;
+            }
+
+            broadcast(GameMessage.chat("server", result.getMessage()));
+            if (message.getType() == MessageType.ATTACK) {
+                broadcast(GameMessage.attackResult(
+                        client.nickName,
+                        result.getFromTerritory(),
+                        result.getToTerritory(),
+                        result.getAttackerLosses(),
+                        result.getDefenderLosses(),
+                        result.isConquered()
+                ));
+            }
+
+            String phase = gameLogic.isGameOver() ? "gameOver" : "playing";
+            broadcast(GameMessage.gameState(gameLogic.toMessageData(phase)));
+            broadcast(GameMessage.turnChange(gameLogic.getCurrentPlayer()));
+        }
+    }
+
+    private GameLogic.Result applyGameAction(String nickName, GameMessage message) {
+        if (message.getType() == MessageType.REINFORCEMENT) {
+            return gameLogic.reinforce(
+                    nickName,
+                    message.get("territory"),
+                    parseArmies(message)
+            );
+        }
+
+        if (message.getType() == MessageType.ATTACK) {
+            return gameLogic.attack(
+                    nickName,
+                    message.get("fromTerritory"),
+                    message.get("toTerritory")
+            );
+        }
+
+        if (message.getType() == MessageType.ARMY_MOVEMENT) {
+            return gameLogic.moveArmies(
+                    nickName,
+                    message.get("fromTerritory"),
+                    message.get("toTerritory"),
+                    parseArmies(message)
+            );
+        }
+
+        return gameLogic.advancePhase(nickName);
+    }
+
+    private int parseArmies(GameMessage message) {
+        String armies = message.get("armies");
+        if (armies == null || armies.trim().isEmpty()) {
+            throw new NumberFormatException("Missing armies value.");
+        }
+        return Integer.parseInt(armies);
     }
 
     // Sends a small lobby snapshot after joins/leaves so clients can render waiting state.
