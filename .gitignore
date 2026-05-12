@@ -1,0 +1,11 @@
+.DS_Store
+
+# Build output
+target/
+out/
+bin/
+
+# IDE metadata
+.idea/
+*.iml
+
