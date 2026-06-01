@@ -4,14 +4,21 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>it.progetto-risk</groupId>
+    <parent>
+        <groupId>it.progetto-risk</groupId>
+        <artifactId>piazza-tienanmen</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
     <artifactId>progetto-risk</artifactId>
-    <version>1.0-SNAPSHOT</version>
 
     <properties>
+        <!-- Compilazione bytecode 21; runtime consigliato JDK 21+ (testato con Java 26 + JavaFX 26). -->
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <javafx.version>21.0.6</javafx.version>
+        <!-- Allineare alla major JDK in uso: Java 26 richiede JavaFX 26, non 21. -->
+        <javafx.version>26.0.1</javafx.version>
     </properties>
 
     <dependencies>
@@ -22,9 +29,11 @@
         </dependency>
         <dependency>
             <groupId>org.openjfx</groupId>
-            <artifactId>javafx-web</artifactId>
+            <artifactId>javafx-graphics</artifactId>
             <version>${javafx.version}</version>
         </dependency>
+        <!-- javafx-web (WebView) omesso: su JDK 26 manca jdk.jsobject richiesto da javafx.web.
+             Per mappa interattiva SVG usare ImageView o JDK 21–25 + dipendenza javafx-web. -->
     </dependencies>
 
     <build>
@@ -44,6 +53,17 @@
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>client.RiskClientApp</mainClass>
+                    <options>
+                        <option>--enable-native-access=javafx.graphics</option>
+                    </options>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <mainClass>Start</mainClass>
                 </configuration>
             </plugin>
         </plugins>

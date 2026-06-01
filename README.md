@@ -42,17 +42,29 @@ Aree importanti:
 
 ## Requisiti
 
-- JDK 21 o superiore
+- JDK 21 o superiore (in sviluppo si usa spesso JDK 26)
 - Maven
+- **JavaFX** via Maven (`org.openjfx`): la versione nel `pom.xml` (`javafx.version`) deve avere la **stessa major del JDK** (es. JDK 26 → JavaFX `26.0.1`).
+- **WebView** (`javafx-web`) non è incluso: su JDK 26 il modulo `jdk.jsobject` non esiste. La mappa usa un placeholder; per SVG interattivo in browser embedded serve JDK 21–25 o un rendering via `ImageView`.
 
 ## Come avviare il server
 
-Dalla cartella del progetto Maven:
+Dalla cartella del modulo Maven `risk_start/progetto_risk`:
 
 ```bash
 cd risk_start/progetto_risk
 mvn compile
+mvn exec:java -Dexec.mainClass=Start
+
+# oppure, dopo compile
 java -cp target/classes Start
+```
+
+Dalla root del repository:
+
+```bash
+mvn -pl risk_start/progetto_risk compile
+mvn -pl risk_start/progetto_risk exec:java -Dexec.mainClass=Start
 ```
 
 Di default il server parte sulla porta `5555`.
@@ -65,10 +77,17 @@ java -cp target/classes Start 6000
 
 ## Come avviare il client
 
-In un altro terminale, sempre dalla cartella `risk_start/progetto_risk`:
+In un altro terminale, dalla cartella del modulo:
 
 ```bash
+cd risk_start/progetto_risk
 mvn javafx:run
+```
+
+Dalla root del repository:
+
+```bash
+mvn -pl risk_start/progetto_risk javafx:run
 ```
 
 Per iniziare una partita servono almeno 3 client collegati con nickname diversi. Il primo giocatore che entra nella lobby puo avviare la partita.

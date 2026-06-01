@@ -1,22 +1,29 @@
 package client.view;
 
 import client.controller.GameController;
-import javafx.concurrent.Worker;
+import client.view.style.UiStyles;
+import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebView;
+import javafx.scene.layout.StackPane;
 
 import java.io.File;
 
+/**
+ * Area mappa centrale (bozza: "SVG FILE MAP").
+ * <p>
+ * Non usa {@code WebView} / {@code javafx-web}: su JDK 26 il modulo {@code jdk.jsobject}
+ * non esiste più e JavaFX Web non parte. STILE: sostituire il placeholder con
+ * {@code ImageView} (PNG/SVG rasterizzato) o ripristinare WebView solo su JDK 21–25.
+ */
 public class MapView extends BorderPane {
     private final GameController controller;
-    private final WebView webView;
+    private final StackPane mapArea;
     private String svgPath;
 
     public MapView(GameController controller) {
         this.controller = controller;
-        this.webView = new WebView();
+        this.mapArea = new StackPane();
         buildLayout();
     }
 
@@ -24,18 +31,14 @@ public class MapView extends BorderPane {
         this.svgPath = svgPath;
         File file = new File(svgPath);
         if (!file.exists()) {
-            showMissingMap(svgPath);
+            showMapMessage("Mappa non trovata:\n" + svgPath
+                    + "\n\nCopia risk-map.svg in src/client/assets/");
             return;
         }
 
-        WebEngine engine = webView.getEngine();
-        engine.getLoadWorker().stateProperty().addListener((observable, oldState, newState) -> {
-            if (newState == Worker.State.SUCCEEDED) {
-                installSvgClickBridge();
-            }
-        });
-        engine.load(file.toURI().toString());
-        setCenter(webView);
+        // STILE: caricare l'immagine (es. SVG→PNG) con Image + ImageView invece del WebView
+        showMapMessage("File mappa presente:\n" + file.getAbsolutePath()
+                + "\n\n(visualizzazione interattiva da collegare — vedi commenti in MapView.java)");
     }
 
     public String getSvgPath() {
@@ -43,19 +46,16 @@ public class MapView extends BorderPane {
     }
 
     private void buildLayout() {
-        Label placeholder = new Label("Map SVG not loaded yet.");
-        placeholder.setStyle("-fx-font-size: 20px; -fx-text-fill: #666666;");
-        setCenter(placeholder);
+        showMapMessage("Mappa — in attesa di risk-map.svg");
+        setCenter(mapArea);
     }
 
-    private void showMissingMap(String path) {
-        Label error = new Label("Map SVG not found: " + path);
-        error.setStyle("-fx-font-size: 18px; -fx-text-fill: #aa0000;");
-        setCenter(error);
-    }
-
-    private void installSvgClickBridge() {
-        // Future step: expose Java object to JavaScript and map SVG element ids to territory names.
-        // The expected SVG convention should be one clickable element per territory, with id=territory name/key.
+    private void showMapMessage(String text) {
+        Label label = new Label(text);
+        label.setStyle(UiStyles.GAME_MAP_PLACEHOLDER);
+        label.setWrapText(true);
+        label.setMaxWidth(600);
+        label.setAlignment(Pos.CENTER);
+        mapArea.getChildren().setAll(label);
     }
 }

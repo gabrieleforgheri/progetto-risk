@@ -34,4 +34,5 @@ Put the SVG map here:
 src/client/assets/risk-map.svg
 ```
 
-The client loads that file automatically in `GameView`.
+`MapView` verifica che il file esista (senza WebView, compatibile con JDK 26).
+Per anteprima interattiva: esportare in PNG e usare `ImageView`, oppure JDK 21–25 + dipendenza `javafx-web`.
