@@ -1,28 +1,36 @@
 package client.view;
 
 import client.controller.GameController;
+import client.view.game.CardsPanel;
+import client.view.game.TurnPanel;
+import client.view.game.UsersPanel;
+import client.view.style.UiStyles;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
+/**
+ * Finestra di gioco (HTML: {@code .window.game}) — identica per host e client.
+ */
 public class GameView extends BorderPane {
     private static final String DEFAULT_MAP_SVG = "src/client/assets/risk-map.svg";
 
     private final GameController controller;
     private final MapView mapView;
-    private final PlayerPanel playerPanel;
-    private final TerritoryPanel territoryPanel;
-    private final EventLogView eventLogView;
+    private final TurnPanel turnPanel;
+    private final UsersPanel usersPanel;
+    private final CardsPanel cardsPanel;
     private final Label statusLabel;
 
     public GameView(GameController controller) {
         this.controller = controller;
         this.mapView = new MapView(controller);
-        this.playerPanel = new PlayerPanel(controller);
-        this.territoryPanel = new TerritoryPanel(controller);
-        this.eventLogView = new EventLogView();
+        this.turnPanel = new TurnPanel(controller);
+        this.usersPanel = new UsersPanel();
+        this.cardsPanel = new CardsPanel();
         this.statusLabel = new Label();
 
         buildLayout();
@@ -30,14 +38,10 @@ public class GameView extends BorderPane {
     }
 
     public void refresh() {
-        playerPanel.refresh();
-        territoryPanel.refresh();
-        refreshEvents();
+        turnPanel.refresh();
+        usersPanel.refresh(controller.getState());
+        cardsPanel.refresh();
         refreshStatus();
-    }
-
-    public void refreshEvents() {
-        eventLogView.setEvents(controller.getState().getEvents());
     }
 
     public void refreshStatus() {
@@ -45,17 +49,30 @@ public class GameView extends BorderPane {
     }
 
     private void buildLayout() {
-        mapView.loadSvg(DEFAULT_MAP_SVG);
-        setCenter(mapView);
-        setRight(buildSideBar());
-        setBottom(statusLabel);
-    }
+        setPadding(new Insets(8));
 
-    private VBox buildSideBar() {
-        VBox sideBar = new VBox(14, playerPanel, territoryPanel, eventLogView);
-        sideBar.setPadding(new Insets(16));
-        sideBar.setPrefWidth(340);
-        VBox.setVgrow(eventLogView, Priority.ALWAYS);
-        return sideBar;
+        // STILE: .turn — sinistra
+        setLeft(turnPanel);
+
+        // STILE: centro mappa — "SVG FILE MAP"
+        mapView.loadSvg(DEFAULT_MAP_SVG);
+        StackPane mapStack = new StackPane(mapView);
+        mapStack.setAlignment(Pos.CENTER);
+        setCenter(mapStack);
+
+        // STILE: .users — destra (top: 50px, right: 25px in bozza)
+        VBox rightColumn = new VBox(usersPanel);
+        rightColumn.setPadding(new Insets(50, 25, 0, 0));
+        setRight(rightColumn);
+
+        // STILE: .cards — barra in basso
+        BorderPane.setMargin(cardsPanel, new Insets(0, 200, 0, 160));
+        setBottom(cardsPanel);
+
+        statusLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 11px;");
+        // Azioni territorio (non in bozza HTML): tenute per test/debug — STILE: nascondere in release
+        // setTop(new TerritoryPanel(controller));
+
+        setStyle("-fx-background-color: #f0f0f0;");
     }
 }

@@ -14,6 +14,7 @@ public class ClientGameState {
     private String stage = "";
     private String winner = "";
     private final List<String> lobbyPlayers = new ArrayList<>();
+    private final List<ChatLine> lobbyChat = new ArrayList<>();
     private final List<String> events = new ArrayList<>();
     private final Map<String, PlayerState> players = new LinkedHashMap<>();
 
@@ -59,6 +60,22 @@ public class ClientGameState {
 
     public List<String> getEvents() {
         return Collections.unmodifiableList(events);
+    }
+
+    public List<ChatLine> getLobbyChat() {
+        return Collections.unmodifiableList(lobbyChat);
+    }
+
+    public void addLobbyChat(String sender, String text) {
+        boolean serverMessage = "server".equalsIgnoreCase(sender);
+        lobbyChat.add(new ChatLine(sender, text, serverMessage));
+        if (lobbyChat.size() > 200) {
+            lobbyChat.remove(0);
+        }
+    }
+
+    public void clearLobbyChat() {
+        lobbyChat.clear();
     }
 
     public Map<String, PlayerState> getPlayers() {
@@ -123,6 +140,9 @@ public class ClientGameState {
 
     private static String valueOrEmpty(String value) {
         return value == null ? "" : value;
+    }
+
+    public record ChatLine(String sender, String text, boolean serverMessage) {
     }
 
     public static class PlayerState {
