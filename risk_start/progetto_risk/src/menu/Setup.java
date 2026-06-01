@@ -101,14 +101,23 @@ public class Setup {
             data.put("initialArmies", String.valueOf(initialArmies));
             data.put("players", String.join(",", getPlayerNickNames()));
 
+            java.util.Set<String> allTerritories = new java.util.LinkedHashSet<>();
             for (PlayerSetup player : players) {
                 String prefix = "player." + player.getNickName() + ".";
                 data.put(prefix + "armies", String.valueOf(player.getInitialArmies()));
                 data.put(prefix + "remainingArmies", String.valueOf(player.getRemainingArmies()));
                 data.put(prefix + "color", player.getColor());
                 data.put(prefix + "territories", String.join(",", player.getTerritories()));
-            }
 
+                for (String territoryName : player.getTerritories()) {
+                    allTerritories.add(territoryName);
+                    String territoryPrefix = "territory." + territoryName + ".";
+                    data.put(territoryPrefix + "owner", player.getNickName());
+                    data.put(territoryPrefix + "armies", "1");
+                    data.put(territoryPrefix + "color", player.getColor());
+                }
+            }
+            data.put("territories", String.join(",", allTerritories));
             return data;
         }
 

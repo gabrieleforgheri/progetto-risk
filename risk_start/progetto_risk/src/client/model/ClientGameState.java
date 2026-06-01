@@ -17,6 +17,7 @@ public class ClientGameState {
     private final List<ChatLine> lobbyChat = new ArrayList<>();
     private final List<String> events = new ArrayList<>();
     private final Map<String, PlayerState> players = new LinkedHashMap<>();
+    private final Map<String, TerritoryState> territories = new LinkedHashMap<>();
 
     public String getMyNickName() {
         return myNickName;
@@ -82,6 +83,10 @@ public class ClientGameState {
         return Collections.unmodifiableMap(players);
     }
 
+    public Map<String, TerritoryState> getTerritories() {
+        return Collections.unmodifiableMap(territories);
+    }
+
     public boolean isFirstPlayer() {
         return myNickName != null && myNickName.equals(firstPlayer);
     }
@@ -100,7 +105,13 @@ public class ClientGameState {
     }
 
     public void updateStartedGame(Map<String, String> data) {
+        updateFromGameState(data);
+    }
+
+    /** Legge snapshot server: giocatori + territori ({@code territory.<nome>.owner/armies/color}). */
+    public void updateFromGameState(Map<String, String> data) {
         players.clear();
+        territories.clear();
         currentPlayer = valueOrEmpty(data.get("currentPlayer"));
         stage = valueOrEmpty(data.get("stage"));
         winner = valueOrEmpty(data.get("winner"));
@@ -110,8 +121,16 @@ public class ClientGameState {
             int armies = parseInt(data.get(prefix + "armies"));
             int remainingArmies = parseInt(data.get(prefix + "remainingArmies"));
             String color = valueOrEmpty(data.get(prefix + "color"));
-            List<String> territories = splitList(data.get(prefix + "territories"));
-            players.put(nickName, new PlayerState(nickName, armies, remainingArmies, color, territories));
+            List<String> ownedTerritories = splitList(data.get(prefix + "territories"));
+            players.put(nickName, new PlayerState(nickName, armies, remainingArmies, color, ownedTerritories));
+        }
+
+        for (String territoryName : splitList(data.get("territories"))) {
+            String prefix = "territory." + territoryName + ".";
+            String owner = valueOrEmpty(data.get(prefix + "owner"));
+            int armies = parseInt(data.get(prefix + "armies"));
+            String color = valueOrEmpty(data.get(prefix + "color"));
+            territories.put(territoryName, new TerritoryState(territoryName, owner, armies, color));
         }
     }
 
@@ -143,6 +162,36 @@ public class ClientGameState {
     }
 
     public record ChatLine(String sender, String text, boolean serverMessage) {
+    }
+
+    public static class TerritoryState {
+        private final String name;
+        private final String owner;
+        private final int armies;
+        private final String color;
+
+        public TerritoryState(String name, String owner, int armies, String color) {
+            this.name = name;
+            this.owner = owner;
+            this.armies = armies;
+            this.color = color;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getOwner() {
+            return owner;
+        }
+
+        public int getArmies() {
+            return armies;
+        }
+
+        public String getColor() {
+            return color;
+        }
     }
 
     public static class PlayerState {
