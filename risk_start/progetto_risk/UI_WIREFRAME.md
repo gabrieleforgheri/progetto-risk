@@ -29,3 +29,17 @@ Bozza originale: `Documenti/projetto finisetre/finestre.html` + `style.css`.
 Su **CREATE SERVER**, `GameController.connectAsHost()` avvia `RiskServer` in un thread daemon,
 attende che la porta sia in ascolto e connette il creatore alla `HostLobbyView`.
 Alla chiusura dell'app viene chiamato `GameController.shutdown()`.
+
+## Mappa SVG e colori territori
+
+- File: `src/client/assets/risk-map.svg` — ogni territorio è un `<path id="snake_case">`.
+- Mapping nomi gioco → id SVG: `client.map.TerritorySvgMapper` (es. `Northwest Territories` → `northwest_territory`, `Yakutsk` → `yakursk`).
+- Rendering: `client.map.SvgTerritoryMap` — `fill` = colore proprietario dal server, `stroke` nero = confini.
+- Stato client: `ClientGameState.updateFromGameState()` legge `territory.<nome>.owner/armies/color` dai messaggi `GAME_STATE`.
+- Aggiornamento live: ogni `playing` / `started` dal server → `MapView.refresh()`.
+
+### Personalizzare i colori
+
+1. **In partita:** colori assegnati in `Setup` (`PLAYER_COLORS`) e inviati dal server in `territory.*.color`.
+2. **Stile mappa:** `SvgTerritoryMap` — costanti `NEUTRAL_FILL`, `BORDER_STROKE`, `BORDER_WIDTH`.
+3. **Stile UI generale:** `UiStyles.GAME_*`.

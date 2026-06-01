@@ -38,6 +38,15 @@
 
     <build>
         <sourceDirectory>src</sourceDirectory>
+        <resources>
+            <resource>
+                <directory>src/client/assets</directory>
+                <targetPath>client/assets</targetPath>
+                <includes>
+                    <include>**/*</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

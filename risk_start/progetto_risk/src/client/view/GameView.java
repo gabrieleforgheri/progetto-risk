@@ -41,6 +41,7 @@ public class GameView extends BorderPane {
         turnPanel.refresh();
         usersPanel.refresh(controller.getState());
         cardsPanel.refresh();
+        mapView.refresh();
         refreshStatus();
     }
 

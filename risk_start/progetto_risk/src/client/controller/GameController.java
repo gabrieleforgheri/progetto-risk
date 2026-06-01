@@ -356,13 +356,13 @@ public class GameController implements MessageListener {
         }
 
         if ("started".equals(phase)) {
-            state.updateStartedGame(data);
+            state.updateFromGameState(data);
             showGame();
             return;
         }
 
         if ("playing".equals(phase) || "gameOver".equals(phase)) {
-            state.updateStartedGame(data);
+            state.updateFromGameState(data);
             refreshGameView();
         }
     }

@@ -1,61 +1,79 @@
 package client.view;
 
 import client.controller.GameController;
+import client.map.SvgTerritoryMap;
 import client.view.style.UiStyles;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.StackPane;
 
 import java.io.File;
+import java.nio.file.Path;
 
 /**
- * Area mappa centrale (bozza: "SVG FILE MAP").
- * <p>
- * Non usa {@code WebView} / {@code javafx-web}: su JDK 26 il modulo {@code jdk.jsobject}
- * non esiste più e JavaFX Web non parte. STILE: sostituire il placeholder con
- * {@code ImageView} (PNG/SVG rasterizzato) o ripristinare WebView solo su JDK 21–25.
+ * Mappa territori da {@code risk-map.svg}: fill = colore proprietario, stroke = confini.
  */
 public class MapView extends BorderPane {
+    public static final String DEFAULT_MAP_SVG = "src/client/assets/risk-map.svg";
+    private static final String CLASSPATH_MAP = "/client/assets/risk-map.svg";
+
     private final GameController controller;
-    private final StackPane mapArea;
-    private String svgPath;
+    private final SvgTerritoryMap svgMap;
+    private final ScrollPane scrollPane;
+    private boolean mapLoaded;
 
     public MapView(GameController controller) {
         this.controller = controller;
-        this.mapArea = new StackPane();
-        buildLayout();
+        this.svgMap = new SvgTerritoryMap();
+        this.scrollPane = new ScrollPane(svgMap);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPannable(true);
+        scrollPane.setStyle("-fx-background-color: #b8d4e8;");
+        setCenter(scrollPane);
     }
 
     public void loadSvg(String svgPath) {
-        this.svgPath = svgPath;
-        File file = new File(svgPath);
-        if (!file.exists()) {
-            showMapMessage("Mappa non trovata:\n" + svgPath
-                    + "\n\nCopia risk-map.svg in src/client/assets/");
+        mapLoaded = tryLoadMap(svgPath);
+        if (!mapLoaded) {
+            Label error = new Label("Mappa non trovata.\nAtteso: "
+                    + Path.of(DEFAULT_MAP_SVG).toAbsolutePath());
+            error.setStyle(UiStyles.GAME_MAP_PLACEHOLDER);
+            error.setWrapText(true);
+            error.setAlignment(Pos.CENTER);
+            setCenter(error);
             return;
         }
+        setCenter(scrollPane);
+        refresh();
+    }
 
-        // STILE: caricare l'immagine (es. SVG→PNG) con Image + ImageView invece del WebView
-        showMapMessage("File mappa presente:\n" + file.getAbsolutePath()
-                + "\n\n(visualizzazione interattiva da collegare — vedi commenti in MapView.java)");
+    public void refresh() {
+        if (mapLoaded) {
+            svgMap.applyState(controller.getState());
+        }
     }
 
     public String getSvgPath() {
-        return svgPath;
+        return DEFAULT_MAP_SVG;
     }
 
-    private void buildLayout() {
-        showMapMessage("Mappa — in attesa di risk-map.svg");
-        setCenter(mapArea);
-    }
+    private boolean tryLoadMap(String svgPath) {
+        File file = Path.of(svgPath).toFile();
+        if (file.exists()) {
+            try {
+                svgMap.loadFromFile(file);
+                return svgMap.isLoaded();
+            } catch (IllegalStateException exception) {
+                return false;
+            }
+        }
 
-    private void showMapMessage(String text) {
-        Label label = new Label(text);
-        label.setStyle(UiStyles.GAME_MAP_PLACEHOLDER);
-        label.setWrapText(true);
-        label.setMaxWidth(600);
-        label.setAlignment(Pos.CENTER);
-        mapArea.getChildren().setAll(label);
+        try {
+            svgMap.loadFromClasspath(CLASSPATH_MAP);
+            return svgMap.isLoaded();
+        } catch (IllegalStateException exception) {
+            return false;
+        }
     }
 }
