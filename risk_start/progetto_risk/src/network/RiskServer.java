@@ -11,6 +11,7 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -33,6 +34,7 @@ public class RiskServer implements Closeable {
     private boolean gameStarted;
     private GameLogic gameLogic;
     private volatile boolean running;
+    private final Map<String, String> lobbyPlayerColors;
 
     public RiskServer() {
         this(DEFAULT_PORT);
@@ -43,6 +45,7 @@ public class RiskServer implements Closeable {
         this.clients = new CopyOnWriteArrayList<>();
         this.lobbyLock = new Object();
         this.gameLock = new Object();
+        this.lobbyPlayerColors = new LinkedHashMap<>();
     }
 
     public static void main(String[] args) throws IOException {
@@ -81,10 +84,18 @@ public class RiskServer implements Closeable {
     // Removes disconnected clients and informs the lobby unless LEAVE was already broadcast.
     private void remove(ClientHandler client) {
         clients.remove(client);
+        if (client.nickName != null) {
+            synchronized (lobbyLock) {
+                lobbyPlayerColors.remove(client.nickName);
+            }
+        }
         if (client.nickName != null && !client.leaveAnnounced) {
             broadcast(GameMessage.leave(client.nickName));
         }
         assignNewFirstPlayerIfNeeded();
+        if (!gameStarted) {
+            broadcastLobbyState();
+        }
     }
 
     @Override
@@ -132,6 +143,11 @@ public class RiskServer implements Closeable {
 
         if (message.getType() == MessageType.CHAT && isStartCommand(message)) {
             startGame(client);
+            return;
+        }
+
+        if (message.getType() == MessageType.CHOOSE_COLOR) {
+            handleChooseColor(client, message);
             return;
         }
 
@@ -209,7 +225,7 @@ public class RiskServer implements Closeable {
                 return;
             }
 
-            Setup.GameSetup gameSetup = Setup.createGame(players);
+            Setup.GameSetup gameSetup = Setup.createGame(players, lobbyPlayerColors);
             synchronized (gameLock) {
                 gameLogic = GameLogic.fromSetup(gameSetup);
             }
@@ -302,6 +318,48 @@ public class RiskServer implements Closeable {
         return Integer.parseInt(armies);
     }
 
+    private void handleChooseColor(ClientHandler client, GameMessage message) {
+        synchronized (lobbyLock) {
+            if (gameStarted) {
+                client.send(GameMessage.error("The game has already started."));
+                return;
+            }
+            if (client.nickName == null) {
+                client.send(GameMessage.error("Join the game before choosing a color."));
+                return;
+            }
+
+            String color = normalizeColor(message.get("color"));
+            if (color == null) {
+                client.send(GameMessage.error("Invalid color."));
+                return;
+            }
+
+            for (Map.Entry<String, String> entry : lobbyPlayerColors.entrySet()) {
+                if (color.equals(entry.getValue()) && !client.nickName.equals(entry.getKey())) {
+                    client.send(GameMessage.error("That color is already taken."));
+                    return;
+                }
+            }
+
+            lobbyPlayerColors.put(client.nickName, color);
+        }
+        broadcastLobbyState();
+    }
+
+    private static String normalizeColor(String color) {
+        if (color == null || color.trim().isEmpty()) {
+            return null;
+        }
+        String normalized = color.trim().toLowerCase();
+        for (String allowed : Setup.LOBBY_COLORS) {
+            if (allowed.equalsIgnoreCase(normalized)) {
+                return allowed;
+            }
+        }
+        return null;
+    }
+
     // Sends a small lobby snapshot after joins/leaves so clients can render waiting state.
     private void broadcastLobbyState() {
         Map<String, String> data = new java.util.LinkedHashMap<>();
@@ -311,6 +369,12 @@ public class RiskServer implements Closeable {
         data.put("firstPlayer", firstPlayerNickName == null ? "" : firstPlayerNickName);
         data.put("minPlayers", String.valueOf(Setup.MIN_PLAYERS));
         data.put("maxPlayers", String.valueOf(Setup.MAX_PLAYERS));
+        for (String player : players) {
+            String color = lobbyPlayerColors.get(player);
+            if (color != null && !color.isEmpty()) {
+                data.put("player." + player + ".color", color);
+            }
+        }
         broadcast(GameMessage.gameState(data));
     }
 

@@ -2,14 +2,18 @@ package client.view.game;
 
 import client.controller.GameController;
 import client.model.ClientGameState;
+import client.view.layout.ViewScale;
+import client.view.style.UiFonts;
 import client.view.style.UiStyles;
+import javafx.animation.FadeTransition;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 
 /**
- * Pannello turno sinistro (HTML: {@code .turn.box}).
+ * Pannello turno sinistro con animazione evidenziazione ({@code .evidenzia} in main.css).
  */
 public class TurnPanel extends VBox {
     private final GameController controller;
@@ -20,6 +24,7 @@ public class TurnPanel extends VBox {
     private final Label turnInfoLabel;
     private final Label turnMessageLabel;
     private final Button endPhaseButton;
+    private FadeTransition highlightTransition;
 
     public TurnPanel(GameController controller) {
         this.controller = controller;
@@ -33,33 +38,24 @@ public class TurnPanel extends VBox {
 
         setAlignment(Pos.TOP_CENTER);
         setSpacing(8);
-        setPrefWidth(140);
-        setMinWidth(140);
-        setPrefHeight(400);
+        setMaxWidth(Double.MAX_VALUE);
         setStyle(UiStyles.GAME_TURN_PANEL);
 
         Label title = new Label("RISK");
+        ViewScale.bindFont(title, widthProperty(), heightProperty(), UiFonts.gunshipBold(28));
         title.setStyle(UiStyles.GAME_TURN_TITLE);
-        playerNameLabel.setId("player-name");
+
         playerNameLabel.setStyle(UiStyles.GAME_TURN_TEXT);
         playerCountryLabel.setStyle(UiStyles.GAME_TURN_TEXT);
-        reserveTitleLabel.setId("reserve-title");
         reserveTitleLabel.setStyle(UiStyles.GAME_TURN_TEXT);
-        reserveLabel.setId("reserve");
         reserveLabel.setStyle(UiStyles.GAME_TURN_TEXT + " -fx-font-size: 20px; -fx-font-weight: bold;");
-        turnInfoLabel.setStyle(UiStyles.GAME_TURN_TEXT);
-        turnMessageLabel.setId("turn-info-message");
+        turnInfoLabel.setStyle(UiStyles.GAME_TURN_INFO);
         turnMessageLabel.setWrapText(true);
         turnMessageLabel.setMaxWidth(120);
         turnMessageLabel.setStyle(UiStyles.GAME_TURN_TEXT);
 
-        endPhaseButton.setId("end");
         endPhaseButton.setStyle(UiStyles.GAME_END_PHASE_BUTTON);
         endPhaseButton.setOnAction(event -> controller.endPhase());
-
-        // STILE: .turno — indicatore visivo turno (vuoto in bozza, personalizzabile)
-        Label turnIndicator = new Label("");
-        turnIndicator.getStyleClass().add("turno");
 
         getChildren().addAll(
                 title,
@@ -69,9 +65,14 @@ public class TurnPanel extends VBox {
                 reserveLabel,
                 turnInfoLabel,
                 turnMessageLabel,
-                turnIndicator,
                 endPhaseButton
         );
+
+        highlightTransition = new FadeTransition(Duration.seconds(2.5), this);
+        highlightTransition.setFromValue(1);
+        highlightTransition.setToValue(0.55);
+        highlightTransition.setAutoReverse(true);
+        highlightTransition.setCycleCount(FadeTransition.INDEFINITE);
     }
 
     public void refresh() {
@@ -90,8 +91,15 @@ public class TurnPanel extends VBox {
 
         boolean myTurn = myName.equals(current);
         endPhaseButton.setDisable(!myTurn || state.getWinner() != null && !state.getWinner().isEmpty());
-
-        // STILE: player-country — mostra continente dominante o territorio selezionato (da collegare a MapView)
         playerCountryLabel.setText(me == null ? "—" : me.getTerritories().size() + " territori");
+
+        if (myTurn && (state.getWinner() == null || state.getWinner().isEmpty())) {
+            if (highlightTransition.getStatus() != javafx.animation.Animation.Status.RUNNING) {
+                highlightTransition.play();
+            }
+        } else {
+            highlightTransition.stop();
+            setOpacity(1);
+        }
     }
 }

@@ -6,6 +6,8 @@ public enum MessageType {
     JOIN,
     // A client exits the lobby or match.
     LEAVE,
+    // A client picks a lobby color before the match starts.
+    CHOOSE_COLOR,
     // Generic text message; the server also uses this for lobby notices.
     CHAT,
     // The active player declares an attack from one territory to another.

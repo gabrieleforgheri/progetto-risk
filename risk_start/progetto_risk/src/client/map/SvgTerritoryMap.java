@@ -2,6 +2,7 @@ package client.map;
 
 import client.model.ClientGameState;
 import javafx.geometry.Bounds;
+import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
@@ -19,6 +20,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Carica {@code risk-map.svg} e crea shape JavaFX per ogni territorio.
@@ -29,19 +31,24 @@ public class SvgTerritoryMap extends StackPane {
     public static final double SVG_HEIGHT = 519.06781;
     private static final Color NEUTRAL_FILL = Color.web("#e8e8e8");
     private static final Color BORDER_STROKE = Color.BLACK;
+    private static final Color SELECTED_STROKE = Color.web("#FFD700");
     private static final double BORDER_WIDTH = 1.2;
+    private static final double SELECTED_BORDER_WIDTH = 3.0;
 
     private final Map<String, TerritoryShape> shapes = new LinkedHashMap<>();
     private final Group mapGroup = new Group();
     private final Pane mapPane = new Pane(mapGroup);
     private boolean loaded;
+    private Consumer<String> territoryClickHandler;
+    private String selectedTerritory = "";
 
     public SvgTerritoryMap() {
         mapPane.setMinSize(SVG_WIDTH, SVG_HEIGHT);
         mapPane.setPrefSize(SVG_WIDTH, SVG_HEIGHT);
         getChildren().add(mapPane);
-        widthProperty().addListener((obs, oldW, newW) -> fitToWidth(newW.doubleValue()));
-        fitToWidth(getWidth() > 0 ? getWidth() : 700);
+        widthProperty().addListener((obs, oldW, newW) -> fitToBounds(newW.doubleValue(), getHeight()));
+        heightProperty().addListener((obs, oldH, newH) -> fitToBounds(getWidth(), newH.doubleValue()));
+        fitToBounds(getWidth() > 0 ? getWidth() : 700, getHeight() > 0 ? getHeight() : 500);
     }
 
     public void loadFromFile(File svgFile) {
@@ -82,6 +89,17 @@ public class SvgTerritoryMap extends StackPane {
         return loaded;
     }
 
+    public void setOnTerritoryClick(Consumer<String> handler) {
+        this.territoryClickHandler = handler;
+    }
+
+    public void setSelectedTerritory(String territoryName) {
+        this.selectedTerritory = territoryName == null ? "" : territoryName;
+        if (loaded) {
+            updateSelectionVisuals();
+        }
+    }
+
     /** Aggiorna fill (proprietario) e testo armate da {@link ClientGameState}. */
     public void applyState(ClientGameState state) {
         if (!loaded) {
@@ -104,6 +122,17 @@ public class SvgTerritoryMap extends StackPane {
             territoryShape.armyLabel().setText(String.valueOf(territory.getArmies()));
             territoryShape.armyLabel().setVisible(territory.getArmies() > 0);
             positionArmyLabel(territoryShape);
+        }
+
+        updateSelectionVisuals();
+    }
+
+    private void updateSelectionVisuals() {
+        for (TerritoryShape territoryShape : shapes.values()) {
+            boolean selected = territoryShape.gameName().equals(selectedTerritory);
+            SVGPath shape = territoryShape.shape();
+            shape.setStroke(selected ? SELECTED_STROKE : BORDER_STROKE);
+            shape.setStrokeWidth(selected ? SELECTED_BORDER_WIDTH : BORDER_WIDTH);
         }
     }
 
@@ -133,11 +162,19 @@ public class SvgTerritoryMap extends StackPane {
             shape.setStroke(BORDER_STROKE);
             shape.setStrokeWidth(BORDER_WIDTH);
             shape.setPickOnBounds(true);
+            shape.setCursor(Cursor.HAND);
+            shape.setOnMouseClicked(event -> {
+                if (territoryClickHandler != null) {
+                    territoryClickHandler.accept(gameName);
+                    event.consume();
+                }
+            });
 
             Text armyLabel = new Text();
             armyLabel.setFont(Font.font("Sans-serif", FontWeight.BOLD, 11));
             armyLabel.setFill(Color.web("#111111"));
             armyLabel.setVisible(false);
+            armyLabel.setMouseTransparent(true);
 
             shapes.put(gameName, new TerritoryShape(gameName, svgId, shape, armyLabel));
             mapGroup.getChildren().addAll(shape, armyLabel);
@@ -156,11 +193,11 @@ public class SvgTerritoryMap extends StackPane {
         label.setLayoutY(y);
     }
 
-    private void fitToWidth(double targetWidth) {
-        if (targetWidth <= 0) {
+    private void fitToBounds(double targetWidth, double targetHeight) {
+        if (targetWidth <= 0 || targetHeight <= 0) {
             return;
         }
-        double scale = targetWidth / SVG_WIDTH;
+        double scale = Math.min(targetWidth / SVG_WIDTH, targetHeight / SVG_HEIGHT);
         mapGroup.setScaleX(scale);
         mapGroup.setScaleY(scale);
         mapPane.setPrefSize(SVG_WIDTH * scale, SVG_HEIGHT * scale);

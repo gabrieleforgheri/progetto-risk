@@ -1,5 +1,6 @@
 package client.controller;
 
+import client.map.TerritoryBorders;
 import client.model.ClientGameState;
 import client.view.ClientLobbyView;
 import client.view.GameView;
@@ -33,6 +34,7 @@ public class GameController implements MessageListener {
     private Runnable onShowHostLobby;
     private Runnable onShowClientLobby;
     private Runnable onShowGame;
+    private String selectedTerritory = "";
 
     public GameController() {
         this.state = new ClientGameState();
@@ -72,6 +74,192 @@ public class GameController implements MessageListener {
 
     public ClientGameState getState() {
         return state;
+    }
+
+    public String getSelectedTerritory() {
+        return selectedTerritory;
+    }
+
+    /**
+     * Gestisce il click su un territorio della mappa in base alla fase di gioco corrente.
+     */
+    public void onTerritorySelected(String territoryName) {
+        if (territoryName == null || territoryName.isBlank()) {
+            return;
+        }
+
+        String myName = state.getMyNickName();
+        if (myName.isEmpty()) {
+            setStatus("Connettiti prima di giocare.");
+            return;
+        }
+        if (!myName.equals(state.getCurrentPlayer())) {
+            setStatus("Non è il tuo turno.");
+            return;
+        }
+        if (state.getWinner() != null && !state.getWinner().isEmpty()) {
+            setStatus("La partita è terminata.");
+            return;
+        }
+
+        ClientGameState.TerritoryState territory = state.getTerritories().get(territoryName);
+        if (territory == null) {
+            setStatus("Territorio sconosciuto: " + territoryName + ".");
+            return;
+        }
+
+        String stage = state.getStage();
+        if ("reinforcement".equalsIgnoreCase(stage)) {
+            handleReinforcementClick(territory);
+        } else if ("attack".equalsIgnoreCase(stage)) {
+            handleAttackClick(territory);
+        } else if ("movement".equalsIgnoreCase(stage)) {
+            handleMovementClick(territory);
+        } else {
+            setStatus("Azione non disponibile in questa fase.");
+        }
+    }
+
+    private void handleReinforcementClick(ClientGameState.TerritoryState territory) {
+        String myName = state.getMyNickName();
+        if (!myName.equals(territory.getOwner())) {
+            setStatus("Puoi rinforzare solo i tuoi territori.");
+            return;
+        }
+
+        ClientGameState.PlayerState me = state.getPlayers().get(myName);
+        if (me == null || me.getRemainingArmies() <= 0) {
+            setStatus("Non hai armate da posizionare.");
+            return;
+        }
+
+        clearTerritorySelection();
+        sendReinforcement(territory.getName(), 1);
+    }
+
+    private void handleAttackClick(ClientGameState.TerritoryState territory) {
+        String myName = state.getMyNickName();
+        String territoryName = territory.getName();
+
+        if (selectedTerritory.isEmpty()) {
+            if (!myName.equals(territory.getOwner())) {
+                setStatus("Seleziona uno dei tuoi territori come origine dell'attacco.");
+                return;
+            }
+            if (territory.getArmies() < 2) {
+                setStatus("Servono almeno 2 armate sul territorio di origine.");
+                return;
+            }
+            selectedTerritory = territoryName;
+            setStatus("Origine: " + territoryName + ". Seleziona un territorio nemico confinante.");
+            refreshGameView();
+            return;
+        }
+
+        if (selectedTerritory.equals(territoryName)) {
+            clearTerritorySelection();
+            setStatus("Selezione annullata.");
+            refreshGameView();
+            return;
+        }
+
+        ClientGameState.TerritoryState fromTerritory = state.getTerritories().get(selectedTerritory);
+        if (fromTerritory == null) {
+            clearTerritorySelection();
+            refreshGameView();
+            return;
+        }
+
+        if (myName.equals(territory.getOwner())) {
+            if (territory.getArmies() >= 2) {
+                selectedTerritory = territoryName;
+                setStatus("Origine: " + territoryName + ". Seleziona un territorio nemico confinante.");
+                refreshGameView();
+            } else {
+                setStatus("Servono almeno 2 armate sul territorio di origine.");
+            }
+            return;
+        }
+
+        if (!TerritoryBorders.areAdjacent(selectedTerritory, territoryName)) {
+            setStatus(selectedTerritory + " non confina con " + territoryName + ".");
+            return;
+        }
+        if (fromTerritory.getArmies() < 2) {
+            setStatus("Servono almeno 2 armate sul territorio di origine.");
+            clearTerritorySelection();
+            refreshGameView();
+            return;
+        }
+
+        String from = selectedTerritory;
+        clearTerritorySelection();
+        sendAttack(from, territoryName, 1);
+    }
+
+    private void handleMovementClick(ClientGameState.TerritoryState territory) {
+        String myName = state.getMyNickName();
+        String territoryName = territory.getName();
+
+        if (selectedTerritory.isEmpty()) {
+            if (!myName.equals(territory.getOwner())) {
+                setStatus("Seleziona uno dei tuoi territori come origine dello spostamento.");
+                return;
+            }
+            if (territory.getArmies() < 2) {
+                setStatus("Servono almeno 2 armate per spostare truppe.");
+                return;
+            }
+            selectedTerritory = territoryName;
+            setStatus("Origine: " + territoryName + ". Seleziona un tuo territorio confinante.");
+            refreshGameView();
+            return;
+        }
+
+        if (selectedTerritory.equals(territoryName)) {
+            clearTerritorySelection();
+            setStatus("Selezione annullata.");
+            refreshGameView();
+            return;
+        }
+
+        ClientGameState.TerritoryState fromTerritory = state.getTerritories().get(selectedTerritory);
+        if (fromTerritory == null) {
+            clearTerritorySelection();
+            refreshGameView();
+            return;
+        }
+
+        if (!myName.equals(territory.getOwner())) {
+            setStatus("Puoi spostare armate solo tra i tuoi territori.");
+            return;
+        }
+
+        if (TerritoryBorders.areAdjacent(selectedTerritory, territoryName)) {
+            if (fromTerritory.getArmies() < 2) {
+                setStatus("Devi lasciare almeno un'armata sul territorio di origine.");
+                clearTerritorySelection();
+                refreshGameView();
+                return;
+            }
+            String from = selectedTerritory;
+            clearTerritorySelection();
+            sendArmyMovement(from, territoryName, 1);
+            return;
+        }
+
+        if (territory.getArmies() >= 2) {
+            selectedTerritory = territoryName;
+            setStatus("Origine: " + territoryName + ". Seleziona un tuo territorio confinante.");
+            refreshGameView();
+            return;
+        }
+
+        setStatus(selectedTerritory + " non confina con " + territoryName + ".");
+    }
+
+    private void clearTerritorySelection() {
+        selectedTerritory = "";
     }
 
     /**
@@ -121,8 +309,6 @@ public class GameController implements MessageListener {
             onShowHostLobby.run();
         }
         if (hostLobbyView != null) {
-            hostLobbyView.setNickName(nickName);
-            hostLobbyView.disableNickNameField();
             hostLobbyView.refresh();
         }
     }
@@ -132,8 +318,6 @@ public class GameController implements MessageListener {
             onShowClientLobby.run();
         }
         if (clientLobbyView != null) {
-            clientLobbyView.setNickName(nickName);
-            clientLobbyView.disableNickNameField();
             clientLobbyView.refresh();
         }
     }
@@ -238,6 +422,19 @@ public class GameController implements MessageListener {
             connection.sendChat(text);
         } catch (IOException exception) {
             setStatus("Invio fallito: " + exception.getMessage());
+        }
+    }
+
+    public void chooseColor(String color) {
+        if (connection == null) {
+            setStatus("Connettiti prima di scegliere un colore.");
+            return;
+        }
+
+        try {
+            connection.sendChooseColor(color);
+        } catch (IOException exception) {
+            setStatus("Selezione colore fallita: " + exception.getMessage());
         }
     }
 
@@ -362,7 +559,13 @@ public class GameController implements MessageListener {
         }
 
         if ("playing".equals(phase) || "gameOver".equals(phase)) {
+            String previousStage = state.getStage();
+            String previousPlayer = state.getCurrentPlayer();
             state.updateFromGameState(data);
+            if (!previousStage.equalsIgnoreCase(state.getStage())
+                    || !previousPlayer.equals(state.getCurrentPlayer())) {
+                clearTerritorySelection();
+            }
             refreshGameView();
         }
     }

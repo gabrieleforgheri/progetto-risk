@@ -14,6 +14,7 @@ public class ClientGameState {
     private String stage = "";
     private String winner = "";
     private final List<String> lobbyPlayers = new ArrayList<>();
+    private final Map<String, String> lobbyPlayerColors = new LinkedHashMap<>();
     private final List<ChatLine> lobbyChat = new ArrayList<>();
     private final List<String> events = new ArrayList<>();
     private final Map<String, PlayerState> players = new LinkedHashMap<>();
@@ -59,6 +60,14 @@ public class ClientGameState {
         return Collections.unmodifiableList(lobbyPlayers);
     }
 
+    public Map<String, String> getLobbyPlayerColors() {
+        return Collections.unmodifiableMap(lobbyPlayerColors);
+    }
+
+    public String getLobbyPlayerColor(String nickName) {
+        return lobbyPlayerColors.getOrDefault(nickName, "");
+    }
+
     public List<String> getEvents() {
         return Collections.unmodifiableList(events);
     }
@@ -102,6 +111,13 @@ public class ClientGameState {
         lobbyPlayers.clear();
         lobbyPlayers.addAll(splitList(data.get("players")));
         firstPlayer = valueOrEmpty(data.get("firstPlayer"));
+        lobbyPlayerColors.clear();
+        for (String nickName : lobbyPlayers) {
+            String color = valueOrEmpty(data.get("player." + nickName + ".color"));
+            if (!color.isEmpty()) {
+                lobbyPlayerColors.put(nickName, color);
+            }
+        }
     }
 
     public void updateStartedGame(Map<String, String> data) {

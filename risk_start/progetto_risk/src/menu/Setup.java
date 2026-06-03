@@ -14,32 +14,34 @@ public class Setup {
     public static final int MIN_PLAYERS = 3;
     public static final int MAX_PLAYERS = 6;
 
-    // Temporary fixed colors assigned in join order until a UI color picker exists.
-    private static final String[] PLAYER_COLORS = {
+    // Lobby palette from finestra di lobby mockup.
+    public static final String[] LOBBY_COLORS = {
             "#ff0000",
-            "#0000ff",
-            "#00aa00",
+            "#87cefa",
             "#ffff00",
-            "#ff8800",
-            "#aa00ff"
+            "#008000",
+            "#ffc0cb",
+            "#ffa07a"
     };
 
     private Setup() {
     }
 
     // Creates the first game snapshot: player colors, initial armies, and territory ownership.
-    public static GameSetup createGame(List<String> playerNickNames) {
+    public static GameSetup createGame(List<String> playerNickNames, Map<String, String> chosenColors) {
         if (playerNickNames.size() < MIN_PLAYERS || playerNickNames.size() > MAX_PLAYERS) {
             throw new IllegalArgumentException("Risk needs between 3 and 6 players.");
         }
 
         int initialArmies = getInitialArmies(playerNickNames.size());
         Map<String, PlayerSetup> players = new LinkedHashMap<>();
+        java.util.Set<String> usedColors = new java.util.LinkedHashSet<>();
 
-        // LinkedHashMap preserves the lobby join order, which also defines the first turn.
         for (int i = 0; i < playerNickNames.size(); i++) {
             String nickName = playerNickNames.get(i);
-            players.put(nickName, new PlayerSetup(nickName, initialArmies, PLAYER_COLORS[i]));
+            String color = resolveColor(nickName, chosenColors, usedColors);
+            usedColors.add(color);
+            players.put(nickName, new PlayerSetup(nickName, initialArmies, color));
         }
 
         // Shuffle once so territory distribution changes from match to match.
@@ -59,6 +61,22 @@ public class Setup {
         }
 
         return new GameSetup(initialArmies, new ArrayList<>(players.values()));
+    }
+
+    private static String resolveColor(String nickName, Map<String, String> chosenColors,
+                                       java.util.Set<String> usedColors) {
+        if (chosenColors != null) {
+            String chosen = chosenColors.get(nickName);
+            if (chosen != null && !chosen.isEmpty() && !usedColors.contains(chosen)) {
+                return chosen;
+            }
+        }
+        for (String color : LOBBY_COLORS) {
+            if (!usedColors.contains(color)) {
+                return color;
+            }
+        }
+        return LOBBY_COLORS[0];
     }
 
     // Risk starting armies by player count.
