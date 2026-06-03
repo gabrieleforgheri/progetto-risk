@@ -14,6 +14,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 
 /**
  * Layout lobby responsive (design 1920×1080).
@@ -66,7 +67,8 @@ public abstract class AbstractLobbyView extends BorderPane {
 
     private void buildSharedLayout() {
         Label title = new Label("GAME LOBBY");
-        ViewScale.bindFont(title, widthProperty(), heightProperty(), UiFonts.gunshipBold(48));
+        title.setTextFill(Color.BLACK);
+        ViewScale.bindFont(title, widthProperty(), heightProperty(), UiFonts.gunshipBold(160));
         StackPane titleBox = new StackPane(title);
         setTop(titleBox);
 

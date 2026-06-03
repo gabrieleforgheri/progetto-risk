@@ -68,14 +68,20 @@ public final class ViewScale {
 
     public static void bindFont(Labeled labeled, ObservableDoubleValue width, ObservableDoubleValue height,
                                 Font baseFont) {
-        uniformBinding(width, height).addListener((obs, oldScale, newScale) ->
-                labeled.setFont(Font.font(baseFont.getFamily(), baseFont.getSize() * newScale.doubleValue())));
+        labeled.fontProperty().bind(Bindings.createObjectBinding(
+                () -> scaledFont(baseFont, uniform(width.get(), height.get())),
+                width, height));
     }
 
     public static void bindFont(TextInputControl field, ObservableDoubleValue width, ObservableDoubleValue height,
                                 Font baseFont) {
-        uniformBinding(width, height).addListener((obs, oldScale, newScale) ->
-                field.setFont(Font.font(baseFont.getFamily(), baseFont.getSize() * newScale.doubleValue())));
+        field.fontProperty().bind(Bindings.createObjectBinding(
+                () -> scaledFont(baseFont, uniform(width.get(), height.get())),
+                width, height));
+    }
+
+    private static Font scaledFont(Font baseFont, double scale) {
+        return Font.font(baseFont.getName(), baseFont.getSize() * scale);
     }
 
     public static void bindControlSize(Control control, ObservableDoubleValue width, ObservableDoubleValue height,

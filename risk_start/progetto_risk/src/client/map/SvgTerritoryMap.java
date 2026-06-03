@@ -43,6 +43,8 @@ public class SvgTerritoryMap extends StackPane {
     private String selectedTerritory = "";
 
     public SvgTerritoryMap() {
+        setStyle("-fx-background-color: transparent;");
+        mapPane.setStyle("-fx-background-color: transparent;");
         mapPane.setMinSize(SVG_WIDTH, SVG_HEIGHT);
         mapPane.setPrefSize(SVG_WIDTH, SVG_HEIGHT);
         getChildren().add(mapPane);

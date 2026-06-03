@@ -71,13 +71,15 @@ public class StartView extends StackPane {
     }
 
     private void buildLayout() {
+        setStyle(UiStyles.START_GRADIENT);
+
         background.setPreserveRatio(true);
         background.setSmooth(false);
         StackPane.setAlignment(background, Pos.CENTER);
 
-        Label title = new Label("RISK!");
-        title.setTextFill(Color.web("#f5f5dc"));
-        ViewScale.bindFont(title, widthProperty(), heightProperty(), UiFonts.gunshipBold(100));
+        Label title = new Label("RISK");
+        title.setTextFill(Color.BLACK);
+        ViewScale.bindFont(title, widthProperty(), heightProperty(), UiFonts.gunshipBold(280));
 
         nickNameField.setPromptText("NICKNAME");
         nickNameField.setStyle(UiStyles.START_INPUT);
@@ -127,7 +129,7 @@ public class StartView extends StackPane {
             }
         });
 
-        // Solo immagine + contenuti UI — niente overlay gradiente che la offusca.
+        // Strati (dietro → davanti): gradiente CSS, immagine nitida, controlli UI.
         getChildren().addAll(background, content);
     }
 

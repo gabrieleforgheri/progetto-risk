@@ -26,7 +26,7 @@ public class MapView extends StackPane {
         this.svgMap = new SvgTerritoryMap();
         this.svgMap.setOnTerritoryClick(controller::onTerritorySelected);
         setAlignment(Pos.CENTER);
-        setStyle("-fx-background-color: #b8d4e8;");
+        setStyle("-fx-background-color: transparent;");
         svgMap.prefWidthProperty().bind(widthProperty());
         svgMap.prefHeightProperty().bind(heightProperty());
         svgMap.maxWidthProperty().bind(widthProperty());

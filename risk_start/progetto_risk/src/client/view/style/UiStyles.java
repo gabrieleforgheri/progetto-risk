@@ -39,7 +39,8 @@ public final class UiStyles {
     // --- finestra start (finestra di avvio/style.css) ---
     public static final String START_GRADIENT =
             "-fx-background-color: linear-gradient(to right, "
-                    + "rgb(153,44,44) 0%, rgb(173,117,64) 40%, rgb(173,117,64) 60%, rgb(153,44,44) 100%);";
+                    + "rgba(153,44,44,1) 0%, rgba(173,117,64,1) 40%, "
+                    + "rgba(173,117,64,1) 60%, rgba(153,44,44,1) 100%);";
 
     public static final String START_BUTTON =
             "-fx-background-color: #807745; -fx-text-fill: white; -fx-cursor: hand; "

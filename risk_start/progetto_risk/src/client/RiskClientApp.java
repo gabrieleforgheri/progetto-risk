@@ -5,6 +5,7 @@ import client.view.ClientLobbyView;
 import client.view.GameView;
 import client.view.HostLobbyView;
 import client.view.StartView;
+import client.view.layout.DesignViewport;
 import client.view.layout.ViewScale;
 import client.view.style.UiStyles;
 import javafx.application.Application;
@@ -17,6 +18,7 @@ public class RiskClientApp extends Application {
     private HostLobbyView hostLobbyView;
     private ClientLobbyView clientLobbyView;
     private GameView gameView;
+    private DesignViewport gameViewport;
     private Scene scene;
 
     public static void main(String[] args) {
@@ -30,6 +32,7 @@ public class RiskClientApp extends Application {
         hostLobbyView = new HostLobbyView(controller);
         clientLobbyView = new ClientLobbyView(controller);
         gameView = new GameView(controller);
+        gameViewport = new DesignViewport(gameView);
 
         controller.setStartView(startView);
         controller.setHostLobbyView(hostLobbyView);
@@ -39,7 +42,7 @@ public class RiskClientApp extends Application {
         controller.setOnShowStart(() -> showRoot(startView));
         controller.setOnShowHostLobby(() -> showRoot(hostLobbyView));
         controller.setOnShowClientLobby(() -> showRoot(clientLobbyView));
-        controller.setOnShowGame(() -> showRoot(gameView));
+        controller.setOnShowGame(() -> showRoot(gameViewport));
 
         stage.setTitle("Risk");
         stage.setMinWidth(ViewScale.DESIGN_W * 0.5);

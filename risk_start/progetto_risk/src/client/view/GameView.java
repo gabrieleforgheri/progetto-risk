@@ -13,7 +13,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 
 /**
- * Finestra di gioco responsive.
+ * Layout di gioco a risoluzione design fissa 1920×1080 (scalato da {@link DesignViewport}).
  */
 public class GameView extends BorderPane {
     private static final String DEFAULT_MAP_SVG = "src/client/assets/risk-map.svg";
@@ -32,6 +32,10 @@ public class GameView extends BorderPane {
         this.usersPanel = new UsersPanel();
         this.cardsPanel = new CardsPanel();
         this.statusLabel = new Label();
+
+        setPrefSize(ViewScale.DESIGN_W, ViewScale.DESIGN_H);
+        setMinSize(ViewScale.DESIGN_W, ViewScale.DESIGN_H);
+        setMaxSize(ViewScale.DESIGN_W, ViewScale.DESIGN_H);
 
         buildLayout();
         refresh();
