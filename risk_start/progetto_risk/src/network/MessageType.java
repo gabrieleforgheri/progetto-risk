@@ -24,6 +24,12 @@ public enum MessageType {
     TURN_CHANGE,
     // The server sends lobby state or full game setup data.
     GAME_STATE,
+    // Secret objective assigned to one player at match start.
+    PLAYER_OBJECTIVE,
+    // Secret territory cards for one player (hand updates).
+    PLAYER_TERRITORY_CARDS,
+    // Trade three territory cards during reinforcement for bonus armies.
+    TRADE_TERRITORY_CARDS,
     // The server rejects or reports an invalid action/connection.
     ERROR
 }

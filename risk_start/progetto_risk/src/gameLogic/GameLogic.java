@@ -28,18 +28,26 @@ public class GameLogic {
     private int playersWaitingForInitialPlacement;
     private Phase phase;
     private String winner;
+    private String winnerObjectiveDescription;
+    private final Map<String, ObjectiveCard> playerObjectives;
+    private final TerritoryCardDeck territoryCardDeck;
 
     private GameLogic(Map<String, PlayerState> players,
                       Map<String, TerritoryState> territories,
-                      List<String> turnOrder) {
+                      List<String> turnOrder,
+                      Map<String, ObjectiveCard> playerObjectives,
+                      TerritoryCardDeck territoryCardDeck) {
         this.players = players;
         this.territories = territories;
         this.turnOrder = turnOrder;
+        this.playerObjectives = playerObjectives;
+        this.territoryCardDeck = territoryCardDeck;
         this.random = new Random();
         this.currentPlayerIndex = 0;
         this.playersWaitingForInitialPlacement = turnOrder.size();
         this.phase = Phase.REINFORCEMENT;
         this.winner = "";
+        this.winnerObjectiveDescription = "";
     }
 
     public static GameLogic fromSetup(Setup.GameSetup setup) {
@@ -80,7 +88,73 @@ public class GameLogic {
             }
         }
 
-        return new GameLogic(players, territories, turnOrder);
+        Map<String, String> playerColors = new LinkedHashMap<>();
+        for (PlayerState player : players.values()) {
+            playerColors.put(player.getNickName(), player.getColor());
+        }
+        Map<String, ObjectiveCard> objectives = ObjectiveCard.dealToPlayers(turnOrder, playerColors);
+        return new GameLogic(players, territories, turnOrder, objectives, new TerritoryCardDeck());
+    }
+
+    public String serializeTerritoryCards(String playerNickName) {
+        PlayerState player = players.get(playerNickName);
+        if (player == null) {
+            return "";
+        }
+        return player.serializeTerritoryCards();
+    }
+
+    public boolean hasTradedTerritoryCardsThisTurn(String playerNickName) {
+        PlayerState player = players.get(playerNickName);
+        return player != null && player.hasTradedTerritoryCardsThisTurn();
+    }
+
+    public Result tradeTerritoryCards(String playerNickName, List<String> cardIds) {
+        if (phase != Phase.REINFORCEMENT) {
+            return Result.rejected(TerritoryCardTrade.WRONG_PHASE_MESSAGE);
+        }
+        Result validation = validateActivePlayer(playerNickName, Phase.REINFORCEMENT);
+        if (!validation.isAccepted()) {
+            return validation;
+        }
+
+        PlayerState player = players.get(playerNickName);
+        if (player.hasTradedTerritoryCardsThisTurn()) {
+            return Result.rejected(TerritoryCardTrade.ALREADY_TRADED_MESSAGE);
+        }
+        if (cardIds == null || cardIds.size() != 3) {
+            return Result.rejected("Devi selezionare esattamente 3 carte.");
+        }
+        if (new LinkedHashSet<>(cardIds).size() != 3) {
+            return Result.rejected("Le 3 carte devono essere diverse.");
+        }
+
+        List<TerritoryCard> selected = player.findTerritoryCards(cardIds);
+        if (selected.size() != 3) {
+            return Result.rejected("Una o più carte selezionate non sono nella tua mano.");
+        }
+
+        List<TerritoryCardUnit> units = new ArrayList<>();
+        for (TerritoryCard card : selected) {
+            units.add(card.getUnit());
+        }
+        int bonus = TerritoryCardTrade.bonusArmiesFor(units);
+        if (bonus < 0) {
+            return Result.rejected(TerritoryCardTrade.INVALID_SET_MESSAGE);
+        }
+
+        player.removeTerritoryCards(cardIds);
+        for (TerritoryCard card : selected) {
+            territoryCardDeck.discard(card);
+        }
+        player.addRemainingArmies(bonus);
+        player.setTradedTerritoryCardsThisTurn(true);
+
+        return Result.accepted(playerNickName + " ha scambiato 3 carte e riceve " + bonus + " armate.");
+    }
+
+    public ObjectiveCard getObjective(String playerNickName) {
+        return playerObjectives.get(playerNickName);
     }
 
     public Result reinforce(String playerNickName, String territoryName, int armies) {
@@ -109,6 +183,7 @@ public class GameLogic {
         if (player.getRemainingArmies() == 0) {
             phase = Phase.ATTACK;
         }
+        checkObjectiveVictory(playerNickName);
 
         return Result.accepted(playerNickName + " reinforced " + territoryName + " with " + armies + " armies.");
     }
@@ -152,7 +227,7 @@ public class GameLogic {
         boolean conquered = toTerritory.getArmies() == 0;
         if (conquered) {
             conquerTerritory(playerNickName, fromTerritory, toTerritory);
-            updateWinner(playerNickName);
+            checkObjectiveVictory(null);
         }
 
         String message = conquered
@@ -188,6 +263,7 @@ public class GameLogic {
 
         fromTerritory.removeArmies(armies);
         toTerritory.addArmies(armies);
+        checkObjectiveVictory(playerNickName);
         return Result.accepted(playerNickName + " moved " + armies + " armies from "
                 + fromTerritoryName + " to " + toTerritoryName + ".");
     }
@@ -214,8 +290,20 @@ public class GameLogic {
             return Result.accepted(playerNickName + " started the movement phase.");
         }
 
+        PlayerState endingPlayer = players.get(playerNickName);
+        boolean drewCard = false;
+        if (endingPlayer != null && endingPlayer.hasConqueredThisTurn()) {
+            TerritoryCard drawn = territoryCardDeck.draw();
+            endingPlayer.addTerritoryCard(drawn);
+            endingPlayer.setConqueredThisTurn(false);
+            drewCard = true;
+        }
+
         advanceTurn();
-        return Result.accepted("Turn changed to " + getCurrentPlayer() + ".");
+        String message = drewCard
+                ? playerNickName + " ha pescato una carta territorio. Turno di " + getCurrentPlayer() + "."
+                : "Turn changed to " + getCurrentPlayer() + ".";
+        return Result.accepted(message);
     }
 
     public String getCurrentPlayer() {
@@ -229,12 +317,31 @@ public class GameLogic {
         return phase == Phase.GAME_OVER;
     }
 
+    public String getWinner() {
+        return winner;
+    }
+
+    public String getWinnerObjectiveDescription() {
+        return winnerObjectiveDescription;
+    }
+
+    public String getWinAnnouncement() {
+        if (winner == null || winner.isEmpty()) {
+            return "";
+        }
+        if (winnerObjectiveDescription == null || winnerObjectiveDescription.isEmpty()) {
+            return winner + " ha vinto la partita!";
+        }
+        return winner + " ha vinto la partita! Missione completata: " + winnerObjectiveDescription;
+    }
+
     public Map<String, String> toMessageData(String messagePhase) {
         Map<String, String> data = new LinkedHashMap<>();
         data.put("phase", messagePhase);
         data.put("stage", phase.name().toLowerCase());
         data.put("currentPlayer", getCurrentPlayer());
         data.put("winner", winner);
+        data.put("winnerObjective", winnerObjectiveDescription);
         data.put("players", String.join(",", turnOrder));
 
         for (PlayerState player : players.values()) {
@@ -289,6 +396,7 @@ public class GameLogic {
         int movingArmies = Math.max(1, fromTerritory.getArmies() / 2);
         fromTerritory.removeArmies(movingArmies);
         conqueredTerritory.setArmies(movingArmies);
+        attacker.setConqueredThisTurn(true);
     }
 
     private void advanceTurn() {
@@ -297,6 +405,8 @@ public class GameLogic {
         phase = Phase.REINFORCEMENT;
 
         PlayerState currentPlayer = players.get(getCurrentPlayer());
+        currentPlayer.setTradedTerritoryCardsThisTurn(false);
+        currentPlayer.setConqueredThisTurn(false);
         if (playersWaitingForInitialPlacement <= 0) {
             currentPlayer.setRemainingArmies(calculateReinforcements(currentPlayer));
         }
@@ -317,7 +427,7 @@ public class GameLogic {
     private List<ContinentState> buildContinents() {
         Map<String, ContinentState> continents = new LinkedHashMap<>();
         for (MapObjects.Territory territory : MapObjects.territories) {
-            String continentName = findContinentName(territory.getName());
+            String continentName = Continents.findContinentName(territory.getName());
             int bonusArmies = getContinentBonus(continentName);
             continents.computeIfAbsent(continentName, name -> new ContinentState(name, bonusArmies))
                     .addTerritory(territory.getName());
@@ -325,44 +435,72 @@ public class GameLogic {
         return new ArrayList<>(continents.values());
     }
 
-    private String findContinentName(String territoryName) {
-        if (List.of("Indonesia", "New Guinea", "Western Australia", "Eastern Australia").contains(territoryName)) {
-            return "Oceania";
-        }
-        if (List.of("Venezuela", "Brazil", "Peru", "Argentina").contains(territoryName)) {
-            return "South America";
-        }
-        if (List.of("Iceland", "Scandinavia", "Great Britain", "Northern Europe",
-                "Western Europe", "Southern Europe", "Ukraine").contains(territoryName)) {
-            return "Europe";
-        }
-        if (List.of("North Africa", "Egypt", "East Africa", "Congo", "Madagascar", "South Africa")
-                .contains(territoryName)) {
-            return "Africa";
-        }
-        if (List.of("Greenland", "Quebec", "Ontario", "Western United States", "Central America",
-                "Alberta", "Northwest Territories", "Alaska", "Eastern United States").contains(territoryName)) {
-            return "North America";
-        }
-        return "Asia";
-    }
-
     private int getContinentBonus(String continentName) {
         return switch (continentName) {
-            case "Oceania", "South America" -> 2;
-            case "Africa" -> 3;
-            case "Europe", "North America" -> 5;
-            case "Asia" -> 7;
+            case Continents.OCEANIA, Continents.SOUTH_AMERICA -> 2;
+            case Continents.AFRICA -> 3;
+            case Continents.EUROPE, Continents.NORTH_AMERICA -> 5;
+            case Continents.ASIA -> 7;
             default -> 0;
         };
     }
 
-    private void updateWinner(String playerNickName) {
-        PlayerState player = players.get(playerNickName);
-        if (player != null && player.getTerritories().size() == territories.size()) {
-            winner = playerNickName;
-            phase = Phase.GAME_OVER;
+    private void checkObjectiveVictory(String preferredPlayerNickName) {
+        if (phase == Phase.GAME_OVER) {
+            return;
         }
+
+        if (preferredPlayerNickName != null && trySetWinner(preferredPlayerNickName)) {
+            return;
+        }
+
+        for (String nickName : turnOrder) {
+            if (trySetWinner(nickName)) {
+                return;
+            }
+        }
+    }
+
+    private boolean trySetWinner(String playerNickName) {
+        ObjectiveCard objective = playerObjectives.get(playerNickName);
+        if (objective == null) {
+            return false;
+        }
+        if (!objective.isFulfilled(toPlayerSnapshot(playerNickName), buildAllPlayerSnapshots())) {
+            return false;
+        }
+        winner = playerNickName;
+        winnerObjectiveDescription = objective.getDescription();
+        phase = Phase.GAME_OVER;
+        return true;
+    }
+
+    private ObjectiveCard.PlayerSnapshot toPlayerSnapshot(String playerNickName) {
+        PlayerState player = players.get(playerNickName);
+        if (player == null) {
+            return new ObjectiveCard.PlayerSnapshot(playerNickName, "", List.of(), Map.of());
+        }
+        Map<String, Integer> armiesByTerritory = new LinkedHashMap<>();
+        for (String territoryName : player.getTerritories()) {
+            TerritoryState territory = territories.get(territoryName);
+            if (territory != null) {
+                armiesByTerritory.put(territoryName, territory.getArmies());
+            }
+        }
+        return new ObjectiveCard.PlayerSnapshot(
+                player.getNickName(),
+                player.getColor(),
+                player.getTerritories(),
+                armiesByTerritory
+        );
+    }
+
+    private Map<String, ObjectiveCard.PlayerSnapshot> buildAllPlayerSnapshots() {
+        Map<String, ObjectiveCard.PlayerSnapshot> snapshots = new LinkedHashMap<>();
+        for (String nickName : turnOrder) {
+            snapshots.put(nickName, toPlayerSnapshot(nickName));
+        }
+        return snapshots;
     }
 
     private boolean rollAttackerLoses() {
@@ -436,13 +574,19 @@ public class GameLogic {
         private final String nickName;
         private final String color;
         private final Set<String> territories;
+        private final List<TerritoryCard> territoryCards;
         private int remainingArmies;
+        private boolean conqueredThisTurn;
+        private boolean tradedTerritoryCardsThisTurn;
 
         private PlayerState(String nickName, String color, int remainingArmies) {
             this.nickName = nickName;
             this.color = color;
             this.remainingArmies = remainingArmies;
             this.territories = new LinkedHashSet<>();
+            this.territoryCards = new ArrayList<>();
+            this.conqueredThisTurn = false;
+            this.tradedTerritoryCardsThisTurn = false;
         }
 
         private String getNickName() {
@@ -463,6 +607,58 @@ public class GameLogic {
 
         private void removeRemainingArmies(int armies) {
             remainingArmies -= armies;
+        }
+
+        private void addRemainingArmies(int armies) {
+            remainingArmies += armies;
+        }
+
+        private boolean hasConqueredThisTurn() {
+            return conqueredThisTurn;
+        }
+
+        private void setConqueredThisTurn(boolean conqueredThisTurn) {
+            this.conqueredThisTurn = conqueredThisTurn;
+        }
+
+        private boolean hasTradedTerritoryCardsThisTurn() {
+            return tradedTerritoryCardsThisTurn;
+        }
+
+        private void setTradedTerritoryCardsThisTurn(boolean tradedTerritoryCardsThisTurn) {
+            this.tradedTerritoryCardsThisTurn = tradedTerritoryCardsThisTurn;
+        }
+
+        private void addTerritoryCard(TerritoryCard card) {
+            territoryCards.add(card);
+        }
+
+        private List<TerritoryCard> findTerritoryCards(List<String> cardIds) {
+            List<TerritoryCard> found = new ArrayList<>();
+            for (String cardId : cardIds) {
+                for (TerritoryCard card : territoryCards) {
+                    if (card.getId().equals(cardId)) {
+                        found.add(card);
+                        break;
+                    }
+                }
+            }
+            return found;
+        }
+
+        private void removeTerritoryCards(List<String> cardIds) {
+            territoryCards.removeIf(card -> cardIds.contains(card.getId()));
+        }
+
+        private String serializeTerritoryCards() {
+            if (territoryCards.isEmpty()) {
+                return "";
+            }
+            List<String> encoded = new ArrayList<>();
+            for (TerritoryCard card : territoryCards) {
+                encoded.add(card.serialize());
+            }
+            return String.join(";", encoded);
         }
 
         private List<String> getTerritories() {

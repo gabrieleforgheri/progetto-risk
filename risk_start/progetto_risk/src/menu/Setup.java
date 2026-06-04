@@ -24,7 +24,28 @@ public class Setup {
             "#ffa07a"
     };
 
+    public static final String[] LOBBY_COLOR_NAMES = {
+            "Rosso",
+            "Azzurro",
+            "Giallo",
+            "Verde",
+            "Rosa",
+            "Arancione"
+    };
+
     private Setup() {
+    }
+
+    public static String displayNameForColor(String hexColor) {
+        if (hexColor == null || hexColor.isEmpty()) {
+            return "";
+        }
+        for (int i = 0; i < LOBBY_COLORS.length; i++) {
+            if (LOBBY_COLORS[i].equalsIgnoreCase(hexColor.trim())) {
+                return LOBBY_COLOR_NAMES[i];
+            }
+        }
+        return hexColor;
     }
 
     // Creates the first game snapshot: player colors, initial armies, and territory ownership.

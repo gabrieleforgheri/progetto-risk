@@ -105,6 +105,27 @@ public class GameMessage implements Serializable {
         return new GameMessage(MessageType.GAME_STATE, "server", data);
     }
 
+    // Secret objective for a single client (not broadcast to other players).
+    public static GameMessage playerObjective(String nickName, String objectiveId, String description) {
+        Map<String, String> data = new HashMap<>();
+        data.put("objectiveId", objectiveId);
+        data.put("description", description);
+        return new GameMessage(MessageType.PLAYER_OBJECTIVE, "server", data);
+    }
+
+    public static GameMessage playerTerritoryCards(String nickName, String cards, boolean tradedThisTurn) {
+        Map<String, String> data = new HashMap<>();
+        data.put("cards", cards == null ? "" : cards);
+        data.put("cardsTraded", String.valueOf(tradedThisTurn));
+        return new GameMessage(MessageType.PLAYER_TERRITORY_CARDS, "server", data);
+    }
+
+    public static GameMessage tradeTerritoryCards(String nickName, String cardIds) {
+        Map<String, String> data = new HashMap<>();
+        data.put("cardIds", cardIds);
+        return new GameMessage(MessageType.TRADE_TERRITORY_CARDS, nickName, data);
+    }
+
     // Server-only error message sent when a request cannot be accepted.
     public static GameMessage error(String text) {
         Map<String, String> data = new HashMap<>();

@@ -67,6 +67,10 @@ public class ClientConnection implements Closeable {
         send(GameMessage.endPhase(nickName));
     }
 
+    public void sendTradeTerritoryCards(String cardIds) throws IOException {
+        send(GameMessage.tradeTerritoryCards(nickName, cardIds));
+    }
+
     public void sendLeave() throws IOException {
         send(GameMessage.leave(nickName));
     }
