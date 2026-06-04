@@ -30,7 +30,7 @@ public class GameView extends BorderPane {
         this.mapView = new MapView(controller);
         this.turnPanel = new TurnPanel(controller);
         this.usersPanel = new UsersPanel();
-        this.cardsPanel = new CardsPanel();
+        this.cardsPanel = new CardsPanel(controller);
         this.statusLabel = new Label();
 
         setPrefSize(ViewScale.DESIGN_W, ViewScale.DESIGN_H);
@@ -54,6 +54,22 @@ public class GameView extends BorderPane {
 
     public void refreshStatus() {
         statusLabel.setText(controller.getState().getStatus());
+    }
+
+    public void toggleTerritoryCardSelection(String cardId) {
+        cardsPanel.toggleSelection(cardId);
+    }
+
+    public int getTerritoryCardSelectionCount() {
+        return cardsPanel.getSelectionCount();
+    }
+
+    public java.util.List<String> getSelectedTerritoryCardIds() {
+        return cardsPanel.getSelectedCardIds();
+    }
+
+    public void clearTerritoryCardSelection() {
+        cardsPanel.clearTerritoryCardSelection();
     }
 
     private void buildLayout() {

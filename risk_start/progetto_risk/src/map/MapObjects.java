@@ -192,6 +192,14 @@ public class MapObjects {
             this.name = name;
             this.value = value;
         }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getValue() {
+            return value;
+        }
     }
 
     public static List<Card> cards = Arrays.asList(

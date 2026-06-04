@@ -2,6 +2,7 @@ package client.controller;
 
 import client.map.TerritoryBorders;
 import client.model.ClientGameState;
+import gameLogic.TerritoryCardTrade;
 import client.view.ClientLobbyView;
 import client.view.GameView;
 import client.view.HostLobbyView;
@@ -16,7 +17,9 @@ import network.RiskServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class GameController implements MessageListener {
     private static final int SERVER_READY_TIMEOUT_MS = 5000;
@@ -490,6 +493,56 @@ public class GameController implements MessageListener {
         }
     }
 
+    public void onTerritoryCardClicked(String cardId) {
+        if (cardId == null || cardId.isBlank()) {
+            return;
+        }
+        if (state.getMyNickName().isEmpty()) {
+            setStatus("Connettiti prima di giocare.");
+            return;
+        }
+        if (!state.getMyNickName().equals(state.getCurrentPlayer())) {
+            setStatus("Non è il tuo turno.");
+            return;
+        }
+        if (!"reinforcement".equalsIgnoreCase(state.getStage())) {
+            setStatus(TerritoryCardTrade.WRONG_PHASE_MESSAGE);
+            return;
+        }
+        if (state.hasTradedTerritoryCardsThisTurn()) {
+            setStatus(TerritoryCardTrade.ALREADY_TRADED_MESSAGE);
+            return;
+        }
+        if (gameView == null) {
+            return;
+        }
+
+        gameView.toggleTerritoryCardSelection(cardId);
+        if (gameView.getTerritoryCardSelectionCount() == 3) {
+            tradeSelectedTerritoryCards();
+        }
+    }
+
+    private void tradeSelectedTerritoryCards() {
+        if (connection == null || gameView == null) {
+            setStatus("Connettiti prima di scambiare carte.");
+            return;
+        }
+
+        List<String> cardIds = gameView.getSelectedTerritoryCardIds();
+        if (cardIds.size() != 3) {
+            return;
+        }
+
+        String payload = cardIds.stream().collect(Collectors.joining(","));
+        try {
+            connection.sendTradeTerritoryCards(payload);
+            gameView.clearTerritoryCardSelection();
+        } catch (IOException exception) {
+            setStatus("Scambio carte non inviato: " + exception.getMessage());
+        }
+    }
+
     public void disconnect() {
         if (connection == null) {
             return;
@@ -537,6 +590,13 @@ public class GameController implements MessageListener {
         } else if (message.getType() == MessageType.PLAYER_OBJECTIVE) {
             state.setMyObjective(message.get("objectiveId"), message.get("description"));
             refreshGameView();
+        } else if (message.getType() == MessageType.PLAYER_TERRITORY_CARDS) {
+            boolean traded = Boolean.parseBoolean(message.get("cardsTraded"));
+            state.updateMyTerritoryCards(message.get("cards"), traded);
+            if (gameView != null) {
+                gameView.clearTerritoryCardSelection();
+            }
+            refreshGameView();
         } else if (message.getType() == MessageType.ERROR) {
             setStatus("Errore server: " + message.get("text"));
         } else if (message.getType() == MessageType.JOIN || message.getType() == MessageType.LEAVE) {
@@ -568,6 +628,9 @@ public class GameController implements MessageListener {
             if (!previousStage.equalsIgnoreCase(state.getStage())
                     || !previousPlayer.equals(state.getCurrentPlayer())) {
                 clearTerritorySelection();
+                if (gameView != null) {
+                    gameView.clearTerritoryCardSelection();
+                }
             }
             refreshGameView();
         }

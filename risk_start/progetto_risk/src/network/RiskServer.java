@@ -155,7 +155,8 @@ public class RiskServer implements Closeable {
         if (message.getType() == MessageType.REINFORCEMENT
                 || message.getType() == MessageType.ATTACK
                 || message.getType() == MessageType.ARMY_MOVEMENT
-                || message.getType() == MessageType.END_PHASE) {
+                || message.getType() == MessageType.END_PHASE
+                || message.getType() == MessageType.TRADE_TERRITORY_CARDS) {
             handleGameAction(client, message);
             return;
         }
@@ -237,6 +238,7 @@ public class RiskServer implements Closeable {
             broadcast(GameMessage.gameState(gameLogic.toMessageData("started")));
             broadcast(GameMessage.turnChange(gameLogic.getCurrentPlayer()));
             sendSecretObjectives();
+            sendPlayerTerritoryCards();
         }
     }
 
@@ -252,6 +254,21 @@ public class RiskServer implements Closeable {
                         objective.getId(),
                         objective.getDescription()));
             }
+        }
+    }
+
+    private void sendPlayerTerritoryCards() {
+        if (gameLogic == null) {
+            return;
+        }
+        for (ClientHandler client : clients) {
+            if (client.nickName == null) {
+                continue;
+            }
+            client.send(GameMessage.playerTerritoryCards(
+                    client.nickName,
+                    gameLogic.serializeTerritoryCards(client.nickName),
+                    gameLogic.hasTradedTerritoryCardsThisTurn(client.nickName)));
         }
     }
 
@@ -298,10 +315,14 @@ public class RiskServer implements Closeable {
             String phase = gameLogic.isGameOver() ? "gameOver" : "playing";
             broadcast(GameMessage.gameState(gameLogic.toMessageData(phase)));
             broadcast(GameMessage.turnChange(gameLogic.getCurrentPlayer()));
+            sendPlayerTerritoryCards();
         }
     }
 
     private GameLogic.Result applyGameAction(String nickName, GameMessage message) {
+        if (message.getType() == MessageType.TRADE_TERRITORY_CARDS) {
+            return gameLogic.tradeTerritoryCards(nickName, parseCardIds(message));
+        }
         if (message.getType() == MessageType.REINFORCEMENT) {
             return gameLogic.reinforce(
                     nickName,
@@ -336,6 +357,21 @@ public class RiskServer implements Closeable {
             throw new NumberFormatException("Missing armies value.");
         }
         return Integer.parseInt(armies);
+    }
+
+    private List<String> parseCardIds(GameMessage message) {
+        String cardIds = message.get("cardIds");
+        if (cardIds == null || cardIds.trim().isEmpty()) {
+            return List.of();
+        }
+        List<String> ids = new ArrayList<>();
+        for (String part : cardIds.split(",")) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                ids.add(trimmed);
+            }
+        }
+        return ids;
     }
 
     private void handleChooseColor(ClientHandler client, GameMessage message) {

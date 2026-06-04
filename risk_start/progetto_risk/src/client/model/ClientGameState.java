@@ -16,6 +16,8 @@ public class ClientGameState {
     private String winnerObjective = "";
     private String myObjectiveId = "";
     private String myObjectiveDescription = "";
+    private boolean territoryCardsTradedThisTurn;
+    private final List<TerritoryCardState> myTerritoryCards = new ArrayList<>();
     private final List<String> lobbyPlayers = new ArrayList<>();
     private final Map<String, String> lobbyPlayerColors = new LinkedHashMap<>();
     private final List<ChatLine> lobbyChat = new ArrayList<>();
@@ -70,6 +72,29 @@ public class ClientGameState {
     public void setMyObjective(String objectiveId, String description) {
         myObjectiveId = objectiveId == null ? "" : objectiveId;
         myObjectiveDescription = description == null ? "" : description;
+    }
+
+    public List<TerritoryCardState> getMyTerritoryCards() {
+        return Collections.unmodifiableList(myTerritoryCards);
+    }
+
+    public boolean hasTradedTerritoryCardsThisTurn() {
+        return territoryCardsTradedThisTurn;
+    }
+
+    public void updateMyTerritoryCards(String cardsPayload, boolean tradedThisTurn) {
+        myTerritoryCards.clear();
+        territoryCardsTradedThisTurn = tradedThisTurn;
+        if (cardsPayload == null || cardsPayload.isBlank()) {
+            return;
+        }
+        for (String encoded : cardsPayload.split(";")) {
+            String trimmed = encoded.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            myTerritoryCards.add(TerritoryCardState.fromSerialized(trimmed));
+        }
     }
 
     public void setCurrentPlayer(String currentPlayer) {
@@ -228,6 +253,48 @@ public class ClientGameState {
 
         public String getColor() {
             return color;
+        }
+    }
+
+    public static class TerritoryCardState {
+        private final String id;
+        private final String territoryName;
+        private final String unitDisplayName;
+
+        public TerritoryCardState(String id, String territoryName, String unitDisplayName) {
+            this.id = id;
+            this.territoryName = territoryName;
+            this.unitDisplayName = unitDisplayName;
+        }
+
+        public static TerritoryCardState fromSerialized(String encoded) {
+            String[] parts = encoded.split(":", 3);
+            if (parts.length != 3) {
+                return new TerritoryCardState(encoded, "?", "?");
+            }
+            String unit = displayUnit(parts[2]);
+            return new TerritoryCardState(parts[0], parts[1], unit);
+        }
+
+        private static String displayUnit(String wireName) {
+            return switch (wireName.toLowerCase()) {
+                case "infantry" -> "Fantino";
+                case "cavalry" -> "Cavaliere";
+                case "artillery" -> "Cannone";
+                default -> wireName;
+            };
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public String getTerritoryName() {
+            return territoryName;
+        }
+
+        public String getUnitDisplayName() {
+            return unitDisplayName;
         }
     }
 
