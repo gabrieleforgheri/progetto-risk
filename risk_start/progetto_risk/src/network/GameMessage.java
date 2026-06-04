@@ -44,6 +44,12 @@ public class GameMessage implements Serializable {
         return new GameMessage(MessageType.CHAT, nickName, data);
     }
 
+    public static GameMessage chooseColor(String nickName, String color) {
+        Map<String, String> data = new HashMap<>();
+        data.put("color", color);
+        return new GameMessage(MessageType.CHOOSE_COLOR, nickName, data);
+    }
+
     // Attack declaration before dice/results are resolved.
     public static GameMessage attack(String nickName, String fromTerritory, String toTerritory, int armies) {
         Map<String, String> data = new HashMap<>();

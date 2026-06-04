@@ -41,6 +41,10 @@ public class ClientConnection implements Closeable {
         send(GameMessage.chat(nickName, text));
     }
 
+    public void sendChooseColor(String color) throws IOException {
+        send(GameMessage.chooseColor(nickName, color));
+    }
+
     public void sendAttack(String fromTerritory, String toTerritory, int armies) throws IOException {
         send(GameMessage.attack(nickName, fromTerritory, toTerritory, armies));
     }

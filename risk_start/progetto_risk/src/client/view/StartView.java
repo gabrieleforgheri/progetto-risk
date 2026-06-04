@@ -2,84 +2,135 @@ package client.view;
 
 import client.controller.GameController;
 import client.util.ConnectionAddress;
+import client.view.component.AnimatedStartButton;
+import client.view.layout.ViewScale;
+import client.view.style.UiFonts;
 import client.view.style.UiStyles;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.AnchorPane;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 
 /**
- * Finestra iniziale app (HTML: {@code .window.start}).
+ * Finestra iniziale — immagine 1920×1080 nitida, layout da {@code finestra di avvio/}.
  */
-public class StartView extends AnchorPane {
+public class StartView extends StackPane {
+    private static final String BACKGROUND_IMAGE = "/client/assets/ui/start-background.png";
+    private static final double BG_NATIVE_W = 1920;
+    private static final double BG_NATIVE_H = 1080;
+
     private final GameController controller;
     private final TextField addressField;
     private final TextField nickNameField;
     private final Label statusLabel;
+    private final ImageView background;
 
     public StartView(GameController controller) {
         this.controller = controller;
         this.addressField = new TextField();
         this.nickNameField = new TextField();
         this.statusLabel = new Label();
+        this.background = new ImageView(loadBackgroundImage());
 
-        setPrefSize(UiStyles.WINDOW_WIDTH, UiStyles.WINDOW_HEIGHT);
-        setStyle(UiStyles.START_ROOT + UiStyles.WINDOW_DEBUG_BORDER);
         buildLayout();
+        widthProperty().addListener((obs, o, n) -> fitBackground());
+        heightProperty().addListener((obs, o, n) -> fitBackground());
     }
 
     public void refreshStatus() {
         statusLabel.setText(controller.getState().getStatus());
     }
 
-    private void buildLayout() {
-        // STILE: overlay titolo / logo sopra lo sfondo start
-        Label title = new Label("RISK");
-        title.setStyle("-fx-font-size: 42px; -fx-font-weight: bold; -fx-text-fill: white;");
-        AnchorPane.setTopAnchor(title, 24.0);
-        AnchorPane.setLeftAnchor(title, 24.0);
-
-        // STILE: .join — pulsante JOIN (non in bozza: nickname richiesto dal protocollo)
-        StackPane joinBox = clickableBox("JOIN", UiStyles.START_JOIN_BOX, this::onJoinClicked);
-        AnchorPane.setTopAnchor(joinBox, 100.0);
-        AnchorPane.setLeftAnchor(joinBox, 340.0);
-        joinBox.setPrefSize(200, 40);
-
-        // STILE: .start input — formato IP:PORTA
-        addressField.setPromptText("IP:PORTA (es. 127.0.0.1:5555)");
-        addressField.setStyle(UiStyles.START_ADDRESS_FIELD);
-        addressField.setPrefWidth(280);
-        AnchorPane.setTopAnchor(addressField, 108.0);
-        AnchorPane.setLeftAnchor(addressField, 600.0);
-
-        // Campo nickname (logica rete, assente nella bozza HTML)
-        nickNameField.setPromptText("Nickname");
-        nickNameField.setPrefWidth(200);
-        AnchorPane.setTopAnchor(nickNameField, 150.0);
-        AnchorPane.setLeftAnchor(nickNameField, 600.0);
-
-        // STILE: .server_create — crea server locale + lobby host
-        StackPane serverBox = clickableBox("CREATE SERVER", UiStyles.START_SERVER_BOX, this::onCreateServerClicked);
-        AnchorPane.setTopAnchor(serverBox, 200.0);
-        AnchorPane.setLeftAnchor(serverBox, 340.0);
-        serverBox.setPrefSize(300, 40);
-
-        statusLabel.setStyle("-fx-text-fill: #cccccc; -fx-font-size: 12px;");
-        AnchorPane.setBottomAnchor(statusLabel, 12.0);
-        AnchorPane.setLeftAnchor(statusLabel, 24.0);
-
-        getChildren().addAll(title, joinBox, addressField, nickNameField, serverBox, statusLabel);
+    private static Image loadBackgroundImage() {
+        return new Image(
+                StartView.class.getResourceAsStream(BACKGROUND_IMAGE),
+                BG_NATIVE_W,
+                BG_NATIVE_H,
+                false,
+                false);
     }
 
-    private StackPane clickableBox(String text, String style, Runnable action) {
-        Label label = new Label(text);
-        label.setStyle(UiStyles.START_JOIN_LABEL);
-        StackPane box = new StackPane(label);
-        box.setStyle(style);
-        box.setOnMouseClicked(event -> action.run());
-        return box;
+    private void fitBackground() {
+        double w = getWidth();
+        double h = getHeight();
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+        // Copre la finestra mantenendo aspect ratio (come CSS width:100%), senza smoothing.
+        double scale = Math.max(w / BG_NATIVE_W, h / BG_NATIVE_H);
+        background.setFitWidth(BG_NATIVE_W * scale);
+        background.setFitHeight(BG_NATIVE_H * scale);
+        background.setSmooth(false);
+    }
+
+    private void buildLayout() {
+        setStyle(UiStyles.START_GRADIENT);
+
+        background.setPreserveRatio(true);
+        background.setSmooth(false);
+        StackPane.setAlignment(background, Pos.CENTER);
+
+        Label title = new Label("RISK");
+        title.setTextFill(Color.BLACK);
+        ViewScale.bindFont(title, widthProperty(), heightProperty(), UiFonts.gunshipBold(280));
+
+        nickNameField.setPromptText("NICKNAME");
+        nickNameField.setStyle(UiStyles.START_INPUT);
+        ViewScale.bindControlSize(nickNameField, widthProperty(), heightProperty(), 300, 54);
+        ViewScale.bindFont(nickNameField, widthProperty(), heightProperty(), UiFonts.gunship(16));
+
+        addressField.setPromptText("INSERT IP:PORT");
+        addressField.setStyle(UiStyles.START_INPUT);
+        ViewScale.bindControlSize(addressField, widthProperty(), heightProperty(), 300, 54);
+        ViewScale.bindFont(addressField, widthProperty(), heightProperty(), UiFonts.gunship(16));
+
+        Button joinButton = AnimatedStartButton.create("JOIN GAME", this::onJoinClicked);
+        joinButton.setStyle(UiStyles.START_BUTTON);
+        ViewScale.bindControlSize(joinButton, widthProperty(), heightProperty(), 300, 60);
+
+        Button createButton = AnimatedStartButton.create("CREATE GAME", this::onCreateServerClicked);
+        createButton.setStyle(UiStyles.START_BUTTON);
+        ViewScale.bindControlSize(createButton, widthProperty(), heightProperty(), 300, 60);
+
+        HBox joinRow = new HBox(16, joinButton, addressField);
+        joinRow.setAlignment(Pos.CENTER);
+        joinRow.prefWidthProperty().bind(ViewScale.scaleWidth(widthProperty(), 800));
+        joinRow.setMaxWidth(Double.MAX_VALUE);
+
+        HBox createRow = new HBox(createButton);
+        createRow.setAlignment(Pos.CENTER);
+        createRow.prefWidthProperty().bind(ViewScale.scaleWidth(widthProperty(), 500));
+
+        statusLabel.setTextFill(Color.web("#eeeeee"));
+        ViewScale.bindFont(statusLabel, widthProperty(), heightProperty(), UiFonts.gunship(12));
+
+        VBox content = new VBox();
+        content.setAlignment(Pos.CENTER);
+        content.maxWidthProperty().bind(widthProperty());
+        content.getChildren().addAll(title, nickNameField, joinRow, createRow, statusLabel);
+        content.spacingProperty().bind(ViewScale.scaleHeight(heightProperty(), 50));
+        content.paddingProperty().bind(new javafx.beans.binding.ObjectBinding<>() {
+            {
+                bind(heightProperty());
+            }
+
+            @Override
+            protected Insets computeValue() {
+                double top = ViewScale.y(heightProperty().get(), 80);
+                double bottom = ViewScale.y(heightProperty().get(), 40);
+                return new Insets(top, 0, bottom, 0);
+            }
+        });
+
+        // Strati (dietro → davanti): gradiente CSS, immagine nitida, controlli UI.
+        getChildren().addAll(background, content);
     }
 
     private void onJoinClicked() {

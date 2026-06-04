@@ -5,6 +5,8 @@ import client.view.ClientLobbyView;
 import client.view.GameView;
 import client.view.HostLobbyView;
 import client.view.StartView;
+import client.view.layout.DesignViewport;
+import client.view.layout.ViewScale;
 import client.view.style.UiStyles;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -16,6 +18,7 @@ public class RiskClientApp extends Application {
     private HostLobbyView hostLobbyView;
     private ClientLobbyView clientLobbyView;
     private GameView gameView;
+    private DesignViewport gameViewport;
     private Scene scene;
 
     public static void main(String[] args) {
@@ -29,22 +32,24 @@ public class RiskClientApp extends Application {
         hostLobbyView = new HostLobbyView(controller);
         clientLobbyView = new ClientLobbyView(controller);
         gameView = new GameView(controller);
+        gameViewport = new DesignViewport(gameView);
 
         controller.setStartView(startView);
         controller.setHostLobbyView(hostLobbyView);
         controller.setClientLobbyView(clientLobbyView);
         controller.setGameView(gameView);
 
-        controller.setOnShowStart(() -> showRoot(startView, UiStyles.WINDOW_WIDTH, UiStyles.WINDOW_HEIGHT));
-        controller.setOnShowHostLobby(() -> showRoot(hostLobbyView, UiStyles.WINDOW_WIDTH, UiStyles.WINDOW_HEIGHT));
-        controller.setOnShowClientLobby(() -> showRoot(clientLobbyView, UiStyles.WINDOW_WIDTH, UiStyles.WINDOW_HEIGHT));
-        controller.setOnShowGame(() -> showRoot(gameView, UiStyles.GAME_WINDOW_WIDTH, UiStyles.GAME_WINDOW_HEIGHT));
+        controller.setOnShowStart(() -> showRoot(startView));
+        controller.setOnShowHostLobby(() -> showRoot(hostLobbyView));
+        controller.setOnShowClientLobby(() -> showRoot(clientLobbyView));
+        controller.setOnShowGame(() -> showRoot(gameViewport));
 
         stage.setTitle("Risk");
-        stage.setMinWidth(800);
-        stage.setMinHeight(480);
+        stage.setMinWidth(ViewScale.DESIGN_W * 0.5);
+        stage.setMinHeight(ViewScale.DESIGN_H * 0.5);
         scene = new Scene(startView, UiStyles.WINDOW_WIDTH, UiStyles.WINDOW_HEIGHT);
         stage.setScene(scene);
+        stage.setMaximized(true);
         stage.show();
     }
 
@@ -55,11 +60,7 @@ public class RiskClientApp extends Application {
         }
     }
 
-    private void showRoot(javafx.scene.Parent root, double width, double height) {
+    private void showRoot(javafx.scene.Parent root) {
         scene.setRoot(root);
-        if (scene.getWidth() < width || scene.getHeight() < height) {
-            scene.getWindow().setWidth(width);
-            scene.getWindow().setHeight(height);
-        }
     }
 }

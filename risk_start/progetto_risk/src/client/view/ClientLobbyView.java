@@ -3,8 +3,7 @@ package client.view;
 import client.controller.GameController;
 
 /**
- * Lobby client che si unisce via IP:PORTA (HTML: {@code .window.lobby_client_join}).
- * Nessun pulsante Start: attende che l'host avvii la partita.
+ * Lobby client (HTML: {@code lobbyviewclient.html}) — senza pulsante Start.
  */
 public class ClientLobbyView extends AbstractLobbyView {
 
@@ -14,12 +13,6 @@ public class ClientLobbyView extends AbstractLobbyView {
     }
 
     @Override
-    protected String lobbyModeLabel() {
-        return "Lobby — Client";
-    }
-
-    @Override
     protected void buildHostSpecificLayout() {
-        // STILE: eventuale messaggio "In attesa dell'host..." sotto la chat
     }
 }

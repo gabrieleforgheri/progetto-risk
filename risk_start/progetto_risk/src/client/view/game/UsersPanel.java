@@ -1,6 +1,8 @@
 package client.view.game;
 
 import client.model.ClientGameState;
+import client.view.layout.ViewScale;
+import client.view.layout.ViewScale;
 import client.view.style.UiStyles;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -10,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Lista giocatori a destra (HTML: {@code .users.box} / {@code .utente}).
+ * Lista giocatori a destra responsive.
  */
 public class UsersPanel extends VBox {
     private final VBox slotsBox;
@@ -18,7 +20,9 @@ public class UsersPanel extends VBox {
     public UsersPanel() {
         setSpacing(8);
         setAlignment(Pos.TOP_CENTER);
-        slotsBox = new VBox(12);
+        setMaxWidth(Double.MAX_VALUE);
+        slotsBox = new VBox();
+        slotsBox.spacingProperty().bind(ViewScale.scaleHeight(heightProperty(), 30));
         getChildren().add(slotsBox);
     }
 
@@ -29,10 +33,17 @@ public class UsersPanel extends VBox {
             names.addAll(state.getLobbyPlayers());
         }
 
+        double slotW = getWidth() > 0 ? getWidth() : 120;
+        double parentH = getParent() instanceof javafx.scene.layout.Region region && region.getHeight() > 0
+                ? region.getHeight() : ViewScale.DESIGN_H;
+        double slotH = ViewScale.y(parentH, 80);
+
         for (String name : names) {
             Label slot = new Label(shortName(name));
-            slot.setStyle(UiStyles.GAME_USER_SLOT
-                    + playerColorStyle(state.getPlayers().get(name)));
+            slot.setPrefSize(slotW, slotH);
+            slot.setMinSize(slotW, slotH);
+            slot.setMaxSize(slotW, slotH);
+            slot.setStyle(UiStyles.GAME_USER_SLOT + playerColorStyle(state.getPlayers().get(name)));
             slotsBox.getChildren().add(slot);
         }
     }
