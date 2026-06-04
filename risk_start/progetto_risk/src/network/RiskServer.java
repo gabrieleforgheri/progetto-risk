@@ -1,6 +1,7 @@
 package network;
 
 import gameLogic.GameLogic;
+import gameLogic.ObjectiveCard;
 import menu.Setup;
 
 import java.io.Closeable;
@@ -235,6 +236,22 @@ public class RiskServer implements Closeable {
             broadcast(GameMessage.chat("server", "Game started by " + client.nickName + "."));
             broadcast(GameMessage.gameState(gameLogic.toMessageData("started")));
             broadcast(GameMessage.turnChange(gameLogic.getCurrentPlayer()));
+            sendSecretObjectives();
+        }
+    }
+
+    private void sendSecretObjectives() {
+        for (ClientHandler client : clients) {
+            if (client.nickName == null || gameLogic == null) {
+                continue;
+            }
+            ObjectiveCard objective = gameLogic.getObjective(client.nickName);
+            if (objective != null) {
+                client.send(GameMessage.playerObjective(
+                        client.nickName,
+                        objective.getId(),
+                        objective.getDescription()));
+            }
         }
     }
 
@@ -264,6 +281,9 @@ public class RiskServer implements Closeable {
             }
 
             broadcast(GameMessage.chat("server", result.getMessage()));
+            if (gameLogic.isGameOver()) {
+                broadcast(GameMessage.chat("server", gameLogic.getWinAnnouncement()));
+            }
             if (message.getType() == MessageType.ATTACK) {
                 broadcast(GameMessage.attackResult(
                         client.nickName,

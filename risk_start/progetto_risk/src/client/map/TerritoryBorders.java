@@ -2,8 +2,6 @@ package client.map;
 
 import map.MapObjects;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,10 +21,6 @@ public final class TerritoryBorders {
     }
 
     private static Map<String, List<String>> buildBorders() {
-        Map<String, List<String>> result = new LinkedHashMap<>();
-        for (MapObjects.Territory territory : MapObjects.territories) {
-            result.put(territory.getName(), List.copyOf(territory.getBorders()));
-        }
-        return Collections.unmodifiableMap(result);
+        return MapObjects.getAllBorders();
     }
 }

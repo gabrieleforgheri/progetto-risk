@@ -534,6 +534,9 @@ public class GameController implements MessageListener {
             refreshLobbyViews();
         } else if (message.getType() == MessageType.ATTACK_RESULT) {
             addEvent("Risultato attacco: " + message.getData());
+        } else if (message.getType() == MessageType.PLAYER_OBJECTIVE) {
+            state.setMyObjective(message.get("objectiveId"), message.get("description"));
+            refreshGameView();
         } else if (message.getType() == MessageType.ERROR) {
             setStatus("Errore server: " + message.get("text"));
         } else if (message.getType() == MessageType.JOIN || message.getType() == MessageType.LEAVE) {

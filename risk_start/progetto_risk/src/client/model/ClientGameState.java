@@ -13,6 +13,9 @@ public class ClientGameState {
     private String currentPlayer = "";
     private String stage = "";
     private String winner = "";
+    private String winnerObjective = "";
+    private String myObjectiveId = "";
+    private String myObjectiveDescription = "";
     private final List<String> lobbyPlayers = new ArrayList<>();
     private final Map<String, String> lobbyPlayerColors = new LinkedHashMap<>();
     private final List<ChatLine> lobbyChat = new ArrayList<>();
@@ -50,6 +53,23 @@ public class ClientGameState {
 
     public String getWinner() {
         return winner;
+    }
+
+    public String getWinnerObjective() {
+        return winnerObjective;
+    }
+
+    public String getMyObjectiveId() {
+        return myObjectiveId;
+    }
+
+    public String getMyObjectiveDescription() {
+        return myObjectiveDescription;
+    }
+
+    public void setMyObjective(String objectiveId, String description) {
+        myObjectiveId = objectiveId == null ? "" : objectiveId;
+        myObjectiveDescription = description == null ? "" : description;
     }
 
     public void setCurrentPlayer(String currentPlayer) {
@@ -131,6 +151,7 @@ public class ClientGameState {
         currentPlayer = valueOrEmpty(data.get("currentPlayer"));
         stage = valueOrEmpty(data.get("stage"));
         winner = valueOrEmpty(data.get("winner"));
+        winnerObjective = valueOrEmpty(data.get("winnerObjective"));
 
         for (String nickName : splitList(data.get("players"))) {
             String prefix = "player." + nickName + ".";

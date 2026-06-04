@@ -28,18 +28,23 @@ public class GameLogic {
     private int playersWaitingForInitialPlacement;
     private Phase phase;
     private String winner;
+    private String winnerObjectiveDescription;
+    private final Map<String, ObjectiveCard> playerObjectives;
 
     private GameLogic(Map<String, PlayerState> players,
                       Map<String, TerritoryState> territories,
-                      List<String> turnOrder) {
+                      List<String> turnOrder,
+                      Map<String, ObjectiveCard> playerObjectives) {
         this.players = players;
         this.territories = territories;
         this.turnOrder = turnOrder;
+        this.playerObjectives = playerObjectives;
         this.random = new Random();
         this.currentPlayerIndex = 0;
         this.playersWaitingForInitialPlacement = turnOrder.size();
         this.phase = Phase.REINFORCEMENT;
         this.winner = "";
+        this.winnerObjectiveDescription = "";
     }
 
     public static GameLogic fromSetup(Setup.GameSetup setup) {
@@ -80,7 +85,16 @@ public class GameLogic {
             }
         }
 
-        return new GameLogic(players, territories, turnOrder);
+        Map<String, String> playerColors = new LinkedHashMap<>();
+        for (PlayerState player : players.values()) {
+            playerColors.put(player.getNickName(), player.getColor());
+        }
+        Map<String, ObjectiveCard> objectives = ObjectiveCard.dealToPlayers(turnOrder, playerColors);
+        return new GameLogic(players, territories, turnOrder, objectives);
+    }
+
+    public ObjectiveCard getObjective(String playerNickName) {
+        return playerObjectives.get(playerNickName);
     }
 
     public Result reinforce(String playerNickName, String territoryName, int armies) {
@@ -109,6 +123,7 @@ public class GameLogic {
         if (player.getRemainingArmies() == 0) {
             phase = Phase.ATTACK;
         }
+        checkObjectiveVictory(playerNickName);
 
         return Result.accepted(playerNickName + " reinforced " + territoryName + " with " + armies + " armies.");
     }
@@ -152,7 +167,7 @@ public class GameLogic {
         boolean conquered = toTerritory.getArmies() == 0;
         if (conquered) {
             conquerTerritory(playerNickName, fromTerritory, toTerritory);
-            updateWinner(playerNickName);
+            checkObjectiveVictory(null);
         }
 
         String message = conquered
@@ -188,6 +203,7 @@ public class GameLogic {
 
         fromTerritory.removeArmies(armies);
         toTerritory.addArmies(armies);
+        checkObjectiveVictory(playerNickName);
         return Result.accepted(playerNickName + " moved " + armies + " armies from "
                 + fromTerritoryName + " to " + toTerritoryName + ".");
     }
@@ -229,12 +245,31 @@ public class GameLogic {
         return phase == Phase.GAME_OVER;
     }
 
+    public String getWinner() {
+        return winner;
+    }
+
+    public String getWinnerObjectiveDescription() {
+        return winnerObjectiveDescription;
+    }
+
+    public String getWinAnnouncement() {
+        if (winner == null || winner.isEmpty()) {
+            return "";
+        }
+        if (winnerObjectiveDescription == null || winnerObjectiveDescription.isEmpty()) {
+            return winner + " ha vinto la partita!";
+        }
+        return winner + " ha vinto la partita! Missione completata: " + winnerObjectiveDescription;
+    }
+
     public Map<String, String> toMessageData(String messagePhase) {
         Map<String, String> data = new LinkedHashMap<>();
         data.put("phase", messagePhase);
         data.put("stage", phase.name().toLowerCase());
         data.put("currentPlayer", getCurrentPlayer());
         data.put("winner", winner);
+        data.put("winnerObjective", winnerObjectiveDescription);
         data.put("players", String.join(",", turnOrder));
 
         for (PlayerState player : players.values()) {
@@ -317,7 +352,7 @@ public class GameLogic {
     private List<ContinentState> buildContinents() {
         Map<String, ContinentState> continents = new LinkedHashMap<>();
         for (MapObjects.Territory territory : MapObjects.territories) {
-            String continentName = findContinentName(territory.getName());
+            String continentName = Continents.findContinentName(territory.getName());
             int bonusArmies = getContinentBonus(continentName);
             continents.computeIfAbsent(continentName, name -> new ContinentState(name, bonusArmies))
                     .addTerritory(territory.getName());
@@ -325,44 +360,72 @@ public class GameLogic {
         return new ArrayList<>(continents.values());
     }
 
-    private String findContinentName(String territoryName) {
-        if (List.of("Indonesia", "New Guinea", "Western Australia", "Eastern Australia").contains(territoryName)) {
-            return "Oceania";
-        }
-        if (List.of("Venezuela", "Brazil", "Peru", "Argentina").contains(territoryName)) {
-            return "South America";
-        }
-        if (List.of("Iceland", "Scandinavia", "Great Britain", "Northern Europe",
-                "Western Europe", "Southern Europe", "Ukraine").contains(territoryName)) {
-            return "Europe";
-        }
-        if (List.of("North Africa", "Egypt", "East Africa", "Congo", "Madagascar", "South Africa")
-                .contains(territoryName)) {
-            return "Africa";
-        }
-        if (List.of("Greenland", "Quebec", "Ontario", "Western United States", "Central America",
-                "Alberta", "Northwest Territories", "Alaska", "Eastern United States").contains(territoryName)) {
-            return "North America";
-        }
-        return "Asia";
-    }
-
     private int getContinentBonus(String continentName) {
         return switch (continentName) {
-            case "Oceania", "South America" -> 2;
-            case "Africa" -> 3;
-            case "Europe", "North America" -> 5;
-            case "Asia" -> 7;
+            case Continents.OCEANIA, Continents.SOUTH_AMERICA -> 2;
+            case Continents.AFRICA -> 3;
+            case Continents.EUROPE, Continents.NORTH_AMERICA -> 5;
+            case Continents.ASIA -> 7;
             default -> 0;
         };
     }
 
-    private void updateWinner(String playerNickName) {
-        PlayerState player = players.get(playerNickName);
-        if (player != null && player.getTerritories().size() == territories.size()) {
-            winner = playerNickName;
-            phase = Phase.GAME_OVER;
+    private void checkObjectiveVictory(String preferredPlayerNickName) {
+        if (phase == Phase.GAME_OVER) {
+            return;
         }
+
+        if (preferredPlayerNickName != null && trySetWinner(preferredPlayerNickName)) {
+            return;
+        }
+
+        for (String nickName : turnOrder) {
+            if (trySetWinner(nickName)) {
+                return;
+            }
+        }
+    }
+
+    private boolean trySetWinner(String playerNickName) {
+        ObjectiveCard objective = playerObjectives.get(playerNickName);
+        if (objective == null) {
+            return false;
+        }
+        if (!objective.isFulfilled(toPlayerSnapshot(playerNickName), buildAllPlayerSnapshots())) {
+            return false;
+        }
+        winner = playerNickName;
+        winnerObjectiveDescription = objective.getDescription();
+        phase = Phase.GAME_OVER;
+        return true;
+    }
+
+    private ObjectiveCard.PlayerSnapshot toPlayerSnapshot(String playerNickName) {
+        PlayerState player = players.get(playerNickName);
+        if (player == null) {
+            return new ObjectiveCard.PlayerSnapshot(playerNickName, "", List.of(), Map.of());
+        }
+        Map<String, Integer> armiesByTerritory = new LinkedHashMap<>();
+        for (String territoryName : player.getTerritories()) {
+            TerritoryState territory = territories.get(territoryName);
+            if (territory != null) {
+                armiesByTerritory.put(territoryName, territory.getArmies());
+            }
+        }
+        return new ObjectiveCard.PlayerSnapshot(
+                player.getNickName(),
+                player.getColor(),
+                player.getTerritories(),
+                armiesByTerritory
+        );
+    }
+
+    private Map<String, ObjectiveCard.PlayerSnapshot> buildAllPlayerSnapshots() {
+        Map<String, ObjectiveCard.PlayerSnapshot> snapshots = new LinkedHashMap<>();
+        for (String nickName : turnOrder) {
+            snapshots.put(nickName, toPlayerSnapshot(nickName));
+        }
+        return snapshots;
     }
 
     private boolean rollAttackerLoses() {

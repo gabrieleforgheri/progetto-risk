@@ -2,9 +2,15 @@ package map;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MapObjects {
+
+    /** Confini ufficiali Risk classico (42 territori), grafo simmetrico. */
+    private static final Map<String, List<String>> BORDERS = buildCanonicalBorders();
 
     public static class Territory {
         String name;
@@ -66,116 +72,128 @@ public class MapObjects {
         }
     }
 
+    public static List<String> getBordersFor(String territoryName) {
+        return BORDERS.getOrDefault(territoryName, List.of());
+    }
+
+    public static Map<String, List<String>> getAllBorders() {
+        return BORDERS;
+    }
+
+    private static Territory territory(String name) {
+        return new Territory(name, 0, getBordersFor(name), "nickNameX", "#000000");
+    }
+
+    public static List<Territory> territories = List.of(
+            territory("Alaska"),
+            territory("Alberta"),
+            territory("Argentina"),
+            territory("Afghanistan"),
+            territory("Brazil"),
+            territory("Central America"),
+            territory("China"),
+            territory("Congo"),
+            territory("Eastern Australia"),
+            territory("Eastern United States"),
+            territory("Egypt"),
+            territory("Great Britain"),
+            territory("Greenland"),
+            territory("Iceland"),
+            territory("India"),
+            territory("Indonesia"),
+            territory("Japan"),
+            territory("Kamchatka"),
+            territory("Madagascar"),
+            territory("Middle East"),
+            territory("Mongolia"),
+            territory("New Guinea"),
+            territory("North Africa"),
+            territory("Northern Europe"),
+            territory("Northwest Territories"),
+            territory("Ontario"),
+            territory("Peru"),
+            territory("Quebec"),
+            territory("Scandinavia"),
+            territory("Siam"),
+            territory("Siberia"),
+            territory("Southern Europe"),
+            territory("South Africa"),
+            territory("Ukraine"),
+            territory("Ural"),
+            territory("Venezuela"),
+            territory("Western Australia"),
+            territory("Western Europe"),
+            territory("Western United States"),
+            territory("Yakutsk"),
+            territory("East Africa")
+    );
+
     public static List<Continent> continents = Arrays.asList(
-        new Continent("Oceania", 2, Arrays.asList(
-            new Territory("Indonesia", 0, Arrays.asList("Siam", "New Guinea", "Western Australia"), "nickNameX", "#000000"),
-            new Territory("New Guinea", 0, Arrays.asList("Eastern Australia", "Indonesia", "Western Australia"), "nickNameX", "#000000"),
-            new Territory("Western Australia", 0, Arrays.asList("Eastern Australia", "Indonesia", "New Guinea"), "nickNameX", "#000000"),
-            new Territory("Eastern Australia", 0, Arrays.asList("Western Australia", "New Guinea"), "nickNameX", "#000000")
-        )),
-        new Continent("South America", 2, Arrays.asList(
-            new Territory("Venezuela", 0, Arrays.asList("Central America", "Brazil", "Peru"), "nickNameX", "#000000"),
-            new Territory("Brazil", 0, Arrays.asList("North Africa", "Peru", "Venezuela"), "nickNameX", "#000000"),
-            new Territory("Peru", 0, Arrays.asList("Venezuela", "Brazil", "Argentina"), "nickNameX", "#000000"),
-            new Territory("Argentina", 0, Arrays.asList("Brazil", "Peru"), "nickNameX", "#000000")
-        )),
-        new Continent("Europe", 3, Arrays.asList(
-            new Territory("Iceland", 0, Arrays.asList("Greenland", "Scandinavia", "Great Britain"), "nickNameX", "#000000"),
-            new Territory("Scandinavia", 0, Arrays.asList("Iceland", "Great Britain", "Northern Europe", "Ukraine"), "nickNameX", "#000000"),
-            new Territory("Great Britain", 0, Arrays.asList("Iceland", "Scandinavia", "Northern Europe", "Western Europe"), "nickNameX", "#000000"),
-            new Territory("Northern Europe", 0, Arrays.asList("Scandinavia", "Great Britain", "Western Europe", "Ukraine", "Southern Europe"), "nickNameX", "#000000"),
-            new Territory("Western Europe", 0, Arrays.asList("North Africa", "Great Britain", "Northern Europe", "Southern Europe"), "nickNameX", "#000000"),
-            new Territory("Southern Europe", 0, Arrays.asList("Western Europe", "North Africa", "Northern Europe", "Ukraine", "Egypt", "Middle East"), "nickNameX", "#000000"),
-            new Territory("Ukraine", 0, Arrays.asList("Northern Europe", "Ural", "Southern Europe", "Scandinavia", "Middle East", "Afghanistan"), "nickNameX", "#000000")
-        )),
-        new Continent("Africa", 3, Arrays.asList(
-            new Territory("North Africa", 0, Arrays.asList("Western Europe", "Egypt", "Congo", "Southern Europe", "East Africa"), "nickNameX", "#000000"),
-            new Territory("Egypt", 0, Arrays.asList("Southern Europe", "North Africa", "East Africa", "Middle East", "Congo"), "nickNameX", "#000000"),
-            new Territory("East Africa", 0, Arrays.asList("Congo", "North Africa", "Madagascar", "Egypt", "South Africa"), "nickNameX", "#000000"),
-            new Territory("Congo", 0, Arrays.asList("North Africa", "East Africa", "South Africa"), "nickNameX", "#000000"),
-            new Territory("Madagascar", 0, Arrays.asList("East Africa", "South Africa"), "nickNameX", "#000000"),
-            new Territory("South Africa", 0, Arrays.asList("Congo", "East Africa", "Madagascar"), "nickNameX", "#000000")
-        )),
-        new Continent("North America", 3, Arrays.asList(
-            new Territory("Greenland", 0, Arrays.asList("Iceland", "Quebec", "Ontario", "Northwest Territories"), "nickNameX", "#000000"),
-            new Territory("Quebec", 0, Arrays.asList("Greenland", "Ontario", "Eastern United States"), "nickNameX", "#000000"),
-            new Territory("Ontario", 0, Arrays.asList("Quebec", "Alberta", "Northwest Territories", "Greenland"), "nickNameX", "#000000"),
-            new Territory("Western United States", 0, Arrays.asList("Ontario", "Alberta", "Eastern United States", "Central America"), "nickNameX", "#000000"),
-            new Territory("Central America", 0, Arrays.asList("Venezuela", "Western United States", "Eastern United States"), "nickNameX", "#000000"),
-            new Territory("Alberta", 0, Arrays.asList("Ontario", "Northwest Territories", "Eastern United States", "Alaska"), "nickNameX", "#000000"),
-            new Territory("Northwest Territories", 0, Arrays.asList("Ontario", "Greenland", "Alberta", "Alaska"), "nickNameX", "#000000"),
-            new Territory("Alaska", 0, Arrays.asList("Kamchatka", "Northwest Territories", "Alberta"), "nickNameX", "#000000"),
-            new Territory("Eastern United States", 0, Arrays.asList("Central America", "Ontario", "Western United States", "Quebec"), "nickNameX", "#000000")
-        )),
-        new Continent("Asia", 3, Arrays.asList(
-            new Territory("Kamchatka", 0, Arrays.asList("China", "Japan", "Yakutsk", "Alaska", "Mongolia"), "nickNameX", "#000000"),
-            new Territory("Yakutsk", 0, Arrays.asList("China", "Siberia", "Kamchatka"), "nickNameX", "#000000"),
-            new Territory("Siberia", 0, Arrays.asList("China", "Ural", "Yakutsk", "China", "Mongolia"), "nickNameX", "#000000"),
-            new Territory("Ural", 0, Arrays.asList("Afghanistan", "Ukraine", "Siberia", "China"), "nickNameX", "#000000"),
-            new Territory("Afghanistan", 0, Arrays.asList("Ukraine", "Ural", "Middle East", "China"), "nickNameX", "#000000"),
-            new Territory("Middle East", 0, Arrays.asList("Southern Europe", "Ukraine", "Yakutsk", "Alaska", "Egypt", "Mongolia"), "nickNameX", "#000000"),
-            new Territory("India", 0, Arrays.asList("Middle East", "China", "Siam"), "nickNameX", "#000000"),
-            new Territory("Siam", 0, Arrays.asList("India", "China", "Indonesia"), "nickNameX", "#000000"),
-            new Territory("Japan", 0, Arrays.asList("Mongolia", "Kamchatka"), "nickNameX", "#000000"),
-            new Territory("China", 0, Arrays.asList("Siberia", "Kamchatka", "Yakutsk", "Mongolia"), "nickNameX", "#000000"),
-            new Territory("Mongolia", 0, Arrays.asList("Siberia", "Japan", "Kamchatka", "China", "Mongolia"), "nickNameX", "#000000")
-        ))
+            new Continent("Oceania", 2, Arrays.asList(
+                    territory("Indonesia"),
+                    territory("New Guinea"),
+                    territory("Western Australia"),
+                    territory("Eastern Australia")
+            )),
+            new Continent("South America", 2, Arrays.asList(
+                    territory("Venezuela"),
+                    territory("Brazil"),
+                    territory("Peru"),
+                    territory("Argentina")
+            )),
+            new Continent("Europe", 3, Arrays.asList(
+                    territory("Iceland"),
+                    territory("Scandinavia"),
+                    territory("Great Britain"),
+                    territory("Northern Europe"),
+                    territory("Western Europe"),
+                    territory("Southern Europe"),
+                    territory("Ukraine")
+            )),
+            new Continent("Africa", 3, Arrays.asList(
+                    territory("North Africa"),
+                    territory("Egypt"),
+                    territory("East Africa"),
+                    territory("Congo"),
+                    territory("Madagascar"),
+                    territory("South Africa")
+            )),
+            new Continent("North America", 3, Arrays.asList(
+                    territory("Greenland"),
+                    territory("Quebec"),
+                    territory("Ontario"),
+                    territory("Western United States"),
+                    territory("Central America"),
+                    territory("Alberta"),
+                    territory("Northwest Territories"),
+                    territory("Alaska"),
+                    territory("Eastern United States")
+            )),
+            new Continent("Asia", 3, Arrays.asList(
+                    territory("Kamchatka"),
+                    territory("Yakutsk"),
+                    territory("Siberia"),
+                    territory("Ural"),
+                    territory("Afghanistan"),
+                    territory("Middle East"),
+                    territory("India"),
+                    territory("Siam"),
+                    territory("Japan"),
+                    territory("China"),
+                    territory("Mongolia")
+            ))
     );
-
-    public static List<Territory> territories = Arrays.asList(
-        new Territory("China", 0, Arrays.asList("Mongolia", "Siberia", "Ural", "Afghanistan", "Middle East", "India", "Siam"), "nickNameX", "#000000"),
-        new Territory("Greenland", 0, Arrays.asList("Iceland", "Quebec", "Ontario", "Northwest Territories"), "nickNameX", "#000000"),
-        new Territory("Quebec", 0, Arrays.asList("Greenland", "Ontario", "Eastern United States"), "nickNameX", "#000000"),
-        new Territory("Ontario", 0, Arrays.asList("Quebec", "Alberta", "Northwest Territories", "Greenland"), "nickNameX", "#000000"),
-        new Territory("Western United States", 0, Arrays.asList("Ontario", "Alberta", "Eastern United States", "Central America"), "nickNameX", "#000000"),
-        new Territory("Central America", 0, Arrays.asList("Venezuela", "Western United States", "Eastern United States"), "nickNameX", "#000000"),
-        new Territory("Alberta", 0, Arrays.asList("Ontario", "Northwest Territories", "Eastern United States", "Alaska"), "nickNameX", "#000000"),
-        new Territory("Northwest Territories", 0, Arrays.asList("Ontario", "Greenland", "Alberta", "Alaska"), "nickNameX", "#000000"),
-        new Territory("Alaska", 0, Arrays.asList("Kamchatka", "Northwest Territories", "Alberta"), "nickNameX", "#000000"),
-        new Territory("Eastern United States", 0, Arrays.asList("Central America", "Ontario", "Western United States", "Quebec"), "nickNameX", "#000000"),
-        new Territory("Venezuela", 0, Arrays.asList("Central America", "Brazil", "Peru"), "nickNameX", "#000000"),
-        new Territory("Brazil", 0, Arrays.asList("North Africa", "Peru", "Venezuela"), "nickNameX", "#000000"),
-        new Territory("Peru", 0, Arrays.asList("Venezuela", "Brazil", "Argentina"), "nickNameX", "#000000"),
-        new Territory("Argentina", 0, Arrays.asList("Brazil", "Peru"), "nickNameX", "#000000"),
-        new Territory("Iceland", 0, Arrays.asList("Greenland", "Scandinavia", "Great Britain"), "nickNameX", "#000000"),
-        new Territory("Scandinavia", 0, Arrays.asList("Iceland", "Great Britain", "Northern Europe", "Ukraine"), "nickNameX", "#000000"),
-        new Territory("Great Britain", 0, Arrays.asList("Iceland", "Scandinavia", "Northern Europe", "Western Europe"), "nickNameX", "#000000"),
-        new Territory("Northern Europe", 0, Arrays.asList("Scandinavia", "Great Britain", "Western Europe", "Ukraine", "Southern Europe"), "nickNameX", "#000000"),
-        new Territory("Western Europe", 0, Arrays.asList("North Africa", "Great Britain", "Northern Europe", "Southern Europe"), "nickNameX", "#000000"),
-        new Territory("Southern Europe", 0, Arrays.asList("Western Europe", "North Africa", "Northern Europe", "Ukraine", "Egypt", "Middle East"), "nickNameX", "#000000"),
-        new Territory("Ukraine", 0, Arrays.asList("Northern Europe", "Ural", "Southern Europe", "Scandinavia", "Middle East", "Afghanistan"), "nickNameX", "#000000"),
-        new Territory("North Africa", 0, Arrays.asList("Western Europe", "Egypt", "Congo", "Southern Europe", "Egypt", "East Africa"), "nickNameX", "#000000"),
-        new Territory("Egypt", 0, Arrays.asList("Southern Europe", "North Africa", "East Africa", "Middle East", "Congo"), "nickNameX", "#000000"),
-        new Territory("East Africa", 0, Arrays.asList("Congo", "North Africa", "Madagascar", "Egypt", "South Africa"), "nickNameX", "#000000"),
-        new Territory("Congo", 0, Arrays.asList("North Africa", "East Africa", "South Africa"), "nickNameX", "#000000"),
-        new Territory("Madagascar", 0, Arrays.asList("East Africa", "South Africa"), "nickNameX", "#000000"),
-        new Territory("South Africa", 0, Arrays.asList("Congo", "East Africa", "Madagascar"), "nickNameX", "#000000"),
-        new Territory("Kamchatka", 0, Arrays.asList("China", "Japan", "Yakutsk", "Alaska", "Mongolia"), "nickNameX", "#000000"),
-        new Territory("Yakutsk", 0, Arrays.asList("China", "Siberia", "Kamchatka"), "nickNameX", "#000000"),
-        new Territory("Siberia", 0, Arrays.asList("China", "Ural", "Yakutsk", "China", "Mongolia"), "nickNameX", "#000000"),
-        new Territory("Ural", 0, Arrays.asList("Afghanistan", "Ukraine", "Siberia", "China"), "nickNameX", "#000000"),
-        new Territory("Afghanistan", 0, Arrays.asList("Ukraine", "Ural", "Middle East", "China"), "nickNameX", "#000000"),
-        new Territory("Middle East", 0, Arrays.asList("Southern Europe", "Ukraine", "Yakutsk", "Alaska", "Egypt", "Mongolia"), "nickNameX", "#000000"),
-        new Territory("India", 0, Arrays.asList("Middle East", "China", "Siam"), "nickNameX", "#000000"),
-        new Territory("Siam", 0, Arrays.asList("India", "China", "Indonesia"), "nickNameX", "#000000"),
-        new Territory("Japan", 0, Arrays.asList("Mongolia", "Kamchatka"), "nickNameX", "#000000"),
-        new Territory("China", 0, Arrays.asList("Siberia", "Kamchatka", "Yakutsk", "Mongolia"), "nickNameX", "#000000"),
-        new Territory("Mongolia", 0, Arrays.asList("Siberia", "Japan", "Kamchatka", "China", "Mongolia"), "nickNameX", "#000000"),
-        new Territory("Indonesia", 0, Arrays.asList("Siam", "New Guinea", "Western Australia"), "nickNameX", "#000000"),
-        new Territory("New Guinea", 0, Arrays.asList("Eastern Australia", "Indonesia", "Western Australia"), "nickNameX", "#000000"),
-        new Territory("Western Australia", 0, Arrays.asList("Eastern Australia", "Indonesia", "New Guinea"), "nickNameX", "#000000"),
-        new Territory("Eastern Australia", 0, Arrays.asList("Western Australia", "New Guinea"), "nickNameX", "#000000")
-    );
-
 
     public static class Card {
         String name;
         String value;
+
         public Card(String name, String value) {
             this.name = name;
             this.value = value;
         }
     }
+
     public static List<Card> cards = Arrays.asList(
             new Card("China", "Infantry"),
             new Card("Greenland", "Cavalry"),
@@ -213,11 +231,76 @@ public class MapObjects {
             new Card("India", "Infantry"),
             new Card("Siam", "Cavalry"),
             new Card("Japan", "Artillery"),
-            new Card("China", "Infantry"),
             new Card("Mongolia", "Cavalry"),
             new Card("Indonesia", "Artillery"),
             new Card("New Guinea", "Infantry"),
             new Card("Western Australia", "Cavalry"),
             new Card("Eastern Australia", "Artillery")
     );
+
+    private static Map<String, List<String>> buildCanonicalBorders() {
+        Map<String, List<String>> raw = new LinkedHashMap<>();
+        link(raw, "Alaska", "Alberta", "Kamchatka", "Northwest Territories");
+        link(raw, "Alberta", "Alaska", "Northwest Territories", "Ontario", "Western United States");
+        link(raw, "Argentina", "Brazil", "Peru");
+        link(raw, "Afghanistan", "China", "India", "Middle East", "Ural", "Ukraine");
+        link(raw, "Brazil", "Argentina", "North Africa", "Peru", "Venezuela");
+        link(raw, "Central America", "Eastern United States", "Venezuela", "Western United States");
+        link(raw, "China", "Afghanistan", "India", "Middle East", "Mongolia", "Siberia", "Siam", "Ural");
+        link(raw, "Congo", "East Africa", "North Africa", "South Africa");
+        link(raw, "Eastern Australia", "New Guinea", "Western Australia");
+        link(raw, "Eastern United States", "Central America", "Ontario", "Quebec", "Western United States");
+        link(raw, "Egypt", "East Africa", "Middle East", "North Africa", "Southern Europe");
+        link(raw, "Great Britain", "Iceland", "Northern Europe", "Scandinavia", "Western Europe");
+        link(raw, "Greenland", "Iceland", "Northwest Territories", "Ontario", "Quebec");
+        link(raw, "Iceland", "Great Britain", "Greenland", "Scandinavia");
+        link(raw, "India", "Afghanistan", "China", "Middle East", "Siam");
+        link(raw, "Indonesia", "New Guinea", "Siam", "Western Australia");
+        link(raw, "Japan", "Kamchatka", "Mongolia");
+        link(raw, "Kamchatka", "Alaska", "Japan", "Mongolia", "Siberia", "Yakutsk");
+        link(raw, "Madagascar", "East Africa", "South Africa");
+        link(raw, "Middle East", "Afghanistan", "East Africa", "Egypt", "India", "Southern Europe", "Ukraine");
+        link(raw, "Mongolia", "China", "Japan", "Kamchatka", "Siberia");
+        link(raw, "New Guinea", "Eastern Australia", "Indonesia", "Western Australia");
+        link(raw, "North Africa", "Brazil", "Congo", "East Africa", "Egypt", "Southern Europe", "Western Europe");
+        link(raw, "Northern Europe", "Great Britain", "Scandinavia", "Southern Europe", "Ukraine", "Western Europe");
+        link(raw, "Northwest Territories", "Alaska", "Alberta", "Greenland", "Ontario");
+        link(raw, "Ontario", "Alberta", "Eastern United States", "Greenland", "Northwest Territories", "Quebec", "Western United States");
+        link(raw, "Peru", "Argentina", "Brazil", "Venezuela");
+        link(raw, "Quebec", "Eastern United States", "Greenland", "Ontario");
+        link(raw, "Scandinavia", "Great Britain", "Iceland", "Northern Europe", "Ukraine");
+        link(raw, "Siam", "China", "India", "Indonesia");
+        link(raw, "Siberia", "China", "Kamchatka", "Mongolia", "Ural", "Yakutsk");
+        link(raw, "Southern Europe", "Egypt", "Middle East", "North Africa", "Northern Europe", "Ukraine", "Western Europe");
+        link(raw, "South Africa", "Congo", "East Africa", "Madagascar");
+        link(raw, "Ukraine", "Afghanistan", "Middle East", "Northern Europe", "Scandinavia", "Southern Europe", "Ural");
+        link(raw, "Ural", "Afghanistan", "China", "Siberia", "Ukraine");
+        link(raw, "Venezuela", "Brazil", "Central America", "Peru");
+        link(raw, "Western Australia", "Eastern Australia", "Indonesia", "New Guinea");
+        link(raw, "Western Europe", "Great Britain", "North Africa", "Northern Europe", "Southern Europe");
+        link(raw, "Western United States", "Alberta", "Central America", "Eastern United States", "Ontario");
+        link(raw, "Yakutsk", "Kamchatka", "Siberia");
+        link(raw, "East Africa", "Congo", "Egypt", "Madagascar", "Middle East", "North Africa", "South Africa");
+
+        Map<String, List<String>> frozen = new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry : raw.entrySet()) {
+            List<String> neighbors = new ArrayList<>(entry.getValue());
+            Collections.sort(neighbors);
+            frozen.put(entry.getKey(), Collections.unmodifiableList(neighbors));
+        }
+        return Collections.unmodifiableMap(frozen);
+    }
+
+    private static void link(Map<String, List<String>> graph, String territory, String... neighbors) {
+        List<String> list = graph.computeIfAbsent(territory, key -> new ArrayList<>());
+        for (String neighbor : neighbors) {
+            if (!list.contains(neighbor)) {
+                list.add(neighbor);
+            }
+            List<String> reverse = graph.computeIfAbsent(neighbor, key -> new ArrayList<>());
+            if (!reverse.contains(territory)) {
+                reverse.add(territory);
+            }
+        }
+    }
 }

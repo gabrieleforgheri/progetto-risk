@@ -24,6 +24,8 @@ public enum MessageType {
     TURN_CHANGE,
     // The server sends lobby state or full game setup data.
     GAME_STATE,
+    // Secret objective assigned to one player at match start.
+    PLAYER_OBJECTIVE,
     // The server rejects or reports an invalid action/connection.
     ERROR
 }

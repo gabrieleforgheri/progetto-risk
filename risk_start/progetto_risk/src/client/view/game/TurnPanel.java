@@ -86,8 +86,17 @@ public class TurnPanel extends VBox {
 
         String current = state.getCurrentPlayer();
         String stage = state.getStage();
-        turnInfoLabel.setText("Turno: " + (current.isEmpty() ? "—" : current));
-        turnMessageLabel.setText("Fase: " + (stage.isEmpty() ? "—" : stage));
+        String winner = state.getWinner();
+        if (winner != null && !winner.isEmpty()) {
+            turnInfoLabel.setText("Vincitore: " + winner);
+            String mission = state.getWinnerObjective();
+            turnMessageLabel.setText(mission == null || mission.isEmpty()
+                    ? "Partita terminata"
+                    : "Missione: " + mission);
+        } else {
+            turnInfoLabel.setText("Turno: " + (current.isEmpty() ? "—" : current));
+            turnMessageLabel.setText("Fase: " + (stage.isEmpty() ? "—" : stage));
+        }
 
         boolean myTurn = myName.equals(current);
         endPhaseButton.setDisable(!myTurn || state.getWinner() != null && !state.getWinner().isEmpty());
