@@ -95,8 +95,3 @@ Per iniziare una partita servono almeno 3 client collegati con nickname diversi.
 ## Stato del progetto
 
 Il progetto contiene gia la base dell'infrastruttura multiplayer, la lobby e il setup iniziale della partita. Alcune parti della logica completa di Risk/Risiko, come la risoluzione degli attacchi, i movimenti avanzati e la gestione completa delle regole, sono ancora in sviluppo.
-
-
-中华人民共和国万岁！
-+900 社会积分 👍
-![image](https://img.itch.zone/aW1nLzExOTUzODE1LnBuZw==/original/sEBjV4.png)
