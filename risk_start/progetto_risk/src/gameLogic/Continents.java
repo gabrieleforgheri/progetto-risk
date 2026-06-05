@@ -1,7 +1,5 @@
 package gameLogic;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,13 +72,5 @@ public final class Continents {
                 "Kamchatka", "Yakutsk", "Siberia", "Ural", "Afghanistan", "Middle East",
                 "India", "Siam", "Japan", "China", "Mongolia"));
         return map;
-    }
-
-    public static List<String> allTerritoryNames() {
-        List<String> names = new ArrayList<>();
-        for (List<String> territories : TERRITORIES_BY_CONTINENT.values()) {
-            names.addAll(territories);
-        }
-        return Collections.unmodifiableList(names);
     }
 }

@@ -31,20 +31,8 @@ public class MapObjects {
             return name;
         }
 
-        public int getArmies() {
-            return armies;
-        }
-
         public List<String> getBorders() {
             return borders;
-        }
-
-        public String getOwner() {
-            return owner;
-        }
-
-        public String getColor() {
-            return color;
         }
 
         public void setArmies(int armies) {
@@ -57,18 +45,6 @@ public class MapObjects {
 
         public void setColor(String color) {
             this.color = color;
-        }
-    }
-
-    public static class Continent {
-        String name;
-        int bonusArmies;
-        List<Territory> territories;
-
-        public Continent(String name, int bonusArmies, List<Territory> territories) {
-            this.name = name;
-            this.bonusArmies = bonusArmies;
-            this.territories = territories;
         }
     }
 
@@ -126,62 +102,6 @@ public class MapObjects {
             territory("Western United States"),
             territory("Yakutsk"),
             territory("East Africa")
-    );
-
-    public static List<Continent> continents = Arrays.asList(
-            new Continent("Oceania", 2, Arrays.asList(
-                    territory("Indonesia"),
-                    territory("New Guinea"),
-                    territory("Western Australia"),
-                    territory("Eastern Australia")
-            )),
-            new Continent("South America", 2, Arrays.asList(
-                    territory("Venezuela"),
-                    territory("Brazil"),
-                    territory("Peru"),
-                    territory("Argentina")
-            )),
-            new Continent("Europe", 3, Arrays.asList(
-                    territory("Iceland"),
-                    territory("Scandinavia"),
-                    territory("Great Britain"),
-                    territory("Northern Europe"),
-                    territory("Western Europe"),
-                    territory("Southern Europe"),
-                    territory("Ukraine")
-            )),
-            new Continent("Africa", 3, Arrays.asList(
-                    territory("North Africa"),
-                    territory("Egypt"),
-                    territory("East Africa"),
-                    territory("Congo"),
-                    territory("Madagascar"),
-                    territory("South Africa")
-            )),
-            new Continent("North America", 3, Arrays.asList(
-                    territory("Greenland"),
-                    territory("Quebec"),
-                    territory("Ontario"),
-                    territory("Western United States"),
-                    territory("Central America"),
-                    territory("Alberta"),
-                    territory("Northwest Territories"),
-                    territory("Alaska"),
-                    territory("Eastern United States")
-            )),
-            new Continent("Asia", 3, Arrays.asList(
-                    territory("Kamchatka"),
-                    territory("Yakutsk"),
-                    territory("Siberia"),
-                    territory("Ural"),
-                    territory("Afghanistan"),
-                    territory("Middle East"),
-                    territory("India"),
-                    territory("Siam"),
-                    territory("Japan"),
-                    territory("China"),
-                    territory("Mongolia")
-            ))
     );
 
     public static class Card {

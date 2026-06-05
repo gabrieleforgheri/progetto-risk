@@ -2,7 +2,6 @@ package client.view.game;
 
 import client.model.ClientGameState;
 import client.view.layout.ViewScale;
-import client.view.layout.ViewScale;
 import client.view.style.UiStyles;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
