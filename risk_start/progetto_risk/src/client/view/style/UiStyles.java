@@ -11,8 +11,6 @@ public final class UiStyles {
     // --- globali ---
     public static final double WINDOW_WIDTH = 1920;
     public static final double WINDOW_HEIGHT = 1080;
-    public static final double GAME_WINDOW_WIDTH = 1920;
-    public static final double GAME_WINDOW_HEIGHT = 1080;
 
     /** Sei colori lobby (HTML: {@code .color_choice .box}). */
     public static final String[] LOBBY_PLAYER_COLORS = {

@@ -1,7 +1,6 @@
 package network;
 
 import java.io.Serializable;
-import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,15 +13,12 @@ public class GameMessage implements Serializable {
     private final MessageType type;
     // Nickname of the player who sent the message; server-generated messages use "server".
     private final String sender;
-    // Creation timestamp in epoch milliseconds, useful for logging and replay ordering.
-    private final long createdAt;
     // Flexible string payload so new game fields can be added without new message classes.
     private final Map<String, String> data;
 
     public GameMessage(MessageType type, String sender, Map<String, String> data) {
         this.type = type;
         this.sender = sender;
-        this.createdAt = Instant.now().toEpochMilli();
         // Defensive copy: later changes to the caller's map cannot change this message.
         this.data = new HashMap<>(data);
     }
@@ -139,10 +135,6 @@ public class GameMessage implements Serializable {
 
     public String getSender() {
         return sender;
-    }
-
-    public long getCreatedAt() {
-        return createdAt;
     }
 
     public Map<String, String> getData() {

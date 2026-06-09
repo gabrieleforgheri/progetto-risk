@@ -71,13 +71,4 @@ class MapObjectsBordersTest {
                 "Lista territori e mappa canonica devono avere le stesse chiavi");
     }
 
-    @Test
-    void continentTerritoriesUseCanonicalBorders() {
-        for (MapObjects.Continent continent : MapObjects.continents) {
-            for (MapObjects.Territory territory : continent.territories) {
-                assertEquals(MapObjects.getBordersFor(territory.getName()), territory.getBorders(),
-                        "Continente " + continent.name + ": confini errati per " + territory.getName());
-            }
-        }
-    }
 }

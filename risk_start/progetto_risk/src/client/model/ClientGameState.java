@@ -14,14 +14,12 @@ public class ClientGameState {
     private String stage = "";
     private String winner = "";
     private String winnerObjective = "";
-    private String myObjectiveId = "";
     private String myObjectiveDescription = "";
     private boolean territoryCardsTradedThisTurn;
     private final List<TerritoryCardState> myTerritoryCards = new ArrayList<>();
     private final List<String> lobbyPlayers = new ArrayList<>();
     private final Map<String, String> lobbyPlayerColors = new LinkedHashMap<>();
     private final List<ChatLine> lobbyChat = new ArrayList<>();
-    private final List<String> events = new ArrayList<>();
     private final Map<String, PlayerState> players = new LinkedHashMap<>();
     private final Map<String, TerritoryState> territories = new LinkedHashMap<>();
 
@@ -41,10 +39,6 @@ public class ClientGameState {
         this.status = status;
     }
 
-    public String getFirstPlayer() {
-        return firstPlayer;
-    }
-
     public String getCurrentPlayer() {
         return currentPlayer;
     }
@@ -61,16 +55,11 @@ public class ClientGameState {
         return winnerObjective;
     }
 
-    public String getMyObjectiveId() {
-        return myObjectiveId;
-    }
-
     public String getMyObjectiveDescription() {
         return myObjectiveDescription;
     }
 
-    public void setMyObjective(String objectiveId, String description) {
-        myObjectiveId = objectiveId == null ? "" : objectiveId;
+    public void setMyObjective(String description) {
         myObjectiveDescription = description == null ? "" : description;
     }
 
@@ -113,10 +102,6 @@ public class ClientGameState {
         return lobbyPlayerColors.getOrDefault(nickName, "");
     }
 
-    public List<String> getEvents() {
-        return Collections.unmodifiableList(events);
-    }
-
     public List<ChatLine> getLobbyChat() {
         return Collections.unmodifiableList(lobbyChat);
     }
@@ -145,13 +130,6 @@ public class ClientGameState {
         return myNickName != null && myNickName.equals(firstPlayer);
     }
 
-    public void addEvent(String event) {
-        events.add(event);
-        if (events.size() > 200) {
-            events.remove(0);
-        }
-    }
-
     public void updateLobby(Map<String, String> data) {
         lobbyPlayers.clear();
         lobbyPlayers.addAll(splitList(data.get("players")));
@@ -163,10 +141,6 @@ public class ClientGameState {
                 lobbyPlayerColors.put(nickName, color);
             }
         }
-    }
-
-    public void updateStartedGame(Map<String, String> data) {
-        updateFromGameState(data);
     }
 
     /** Legge snapshot server: giocatori + territori ({@code territory.<nome>.owner/armies/color}). */

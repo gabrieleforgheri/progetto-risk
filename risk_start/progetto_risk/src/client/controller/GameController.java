@@ -583,12 +583,9 @@ public class GameController implements MessageListener {
             if (text != null) {
                 state.addLobbyChat(message.getSender(), text);
             }
-            addEvent(message.getSender() + ": " + text);
             refreshLobbyViews();
-        } else if (message.getType() == MessageType.ATTACK_RESULT) {
-            addEvent("Risultato attacco: " + message.getData());
         } else if (message.getType() == MessageType.PLAYER_OBJECTIVE) {
-            state.setMyObjective(message.get("objectiveId"), message.get("description"));
+            state.setMyObjective(message.get("description"));
             refreshGameView();
         } else if (message.getType() == MessageType.PLAYER_TERRITORY_CARDS) {
             boolean traded = Boolean.parseBoolean(message.get("cardsTraded"));
@@ -600,10 +597,7 @@ public class GameController implements MessageListener {
         } else if (message.getType() == MessageType.ERROR) {
             setStatus("Errore server: " + message.get("text"));
         } else if (message.getType() == MessageType.JOIN || message.getType() == MessageType.LEAVE) {
-            addEvent(message.getType() + " — " + message.getSender());
             refreshLobbyViews();
-        } else {
-            addEvent(message.getType() + " da " + message.getSender() + " " + message.getData());
         }
     }
 
@@ -658,13 +652,6 @@ public class GameController implements MessageListener {
         }
         if (startView != null) {
             startView.refreshStatus();
-        }
-    }
-
-    private void addEvent(String text) {
-        state.addEvent(text);
-        if (gameView != null) {
-            gameView.refresh();
         }
     }
 

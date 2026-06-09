@@ -49,12 +49,6 @@ public class ClientConnection implements Closeable {
         send(GameMessage.attack(nickName, fromTerritory, toTerritory, armies));
     }
 
-    public void sendAttackResult(String fromTerritory, String toTerritory,
-                                 int attackerLosses, int defenderLosses, boolean conquered) throws IOException {
-        send(GameMessage.attackResult(nickName, fromTerritory, toTerritory,
-                attackerLosses, defenderLosses, conquered));
-    }
-
     public void sendReinforcement(String territory, int armies) throws IOException {
         send(GameMessage.reinforcement(nickName, territory, armies));
     }
