@@ -1,4 +1,4 @@
-# Piazza Tienanmen - Progetto Risk
+# Progetto Risk
 
 Progetto Java che implementa una versione multiplayer di Risk/Risiko con architettura client-server.
 
